@@ -1,3 +1,11 @@
+![Estático](https://img.shields.io/badge/Proyecto--Relevo-Activo-blue)
+![Issues](https://img.shields.io/github/issues/MateoEstrada-altF4/Relevo)
+![Último commit](https://img.shields.io/github/last-commit/MateoEstrada-altF4/Relevo)
+![Licencia](https://img.shields.io/github/license/MateoEstrada-altF4/Relevo)
+
+![RELEVO](./assets/logo-relevo.png)
+
+
 # Relevo: control de préstamos de equipo
 
 Aplicación web interna para registrar qué equipo tiene cada persona, cuándo debe devolverlo y cuándo toca su mantenimiento. Reemplaza el Excel de laptops, monitores y cables que hoy nadie actualiza.
