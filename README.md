@@ -1,87 +1,93 @@
-# Reserva de salas de reuniones
+# Relevo: control de préstamos de equipo
 
-Aplicación web para consultar la disponibilidad de las salas de reunión, reservar un horario libre y evitar cruces de reservas. Incluye inicio de sesión con dos roles (colaborador y administrador), aceptación de reglas de uso y un calendario configurable por el administrador.
+Aplicación web interna para registrar qué equipo tiene cada persona, cuándo debe devolverlo y cuándo toca su mantenimiento. Reemplaza el Excel de laptops, monitores y cables que hoy nadie actualiza.
 
-## Características
+## Problema
 
-- Consulta de disponibilidad por fecha, horario, duración y capacidad.
-- Reservas dentro del horario de oficina, sin cruces (también ante reservas simultáneas).
-- Gestión de salas, calendario, horarios y reglas de uso (administrador).
-- Aceptación obligatoria de las reglas de uso, que se vuelve a pedir cuando cambian.
-- Vista "Mis reservas" para consultar y cancelar las propias.
+- No se sabe quién tiene cada equipo ni cuándo debe devolverlo.
+- El Excel no impide anotar dos veces el mismo equipo.
+- Nadie avisa cuando un préstamo vence; depende de que alguien revise registro por registro.
+- No hay historial confiable de quién recibió cada equipo.
 
-## Tecnologías
+## Solución
 
-| Capa          | Tecnología                              |
-|---------------|-----------------------------------------|
-| Cliente       | React 19, Vite, Vitest, Testing Library |
-| Servidor      | Node.js, Express, express-session       |
-| Base de datos | PostgreSQL 16 (migraciones SQL)         |
-| Pruebas e2e   | Playwright                              |
+- Disponibilidad de cada equipo siempre al día.
+- Un equipo solo puede tener un préstamo abierto a la vez, garantizado por el servidor.
+- Revisión diaria automática que detecta préstamos vencidos y mantenimientos pendientes, y genera avisos dentro del sistema.
+- Historial de préstamos y mantenimientos por equipo.
 
-## Estructura
+## Usuarios y roles
 
-```
-client/     Interfaz React (pantallas, cliente de API, pruebas de componentes)
-server/     API Express: rutas, reglas de negocio, migraciones y datos de demo
-e2e/        Pruebas de aceptación con Playwright
-docs/       Diseño y plan de implementación
-```
+| Rol | Puede |
+|-----|-------|
+| **Encargado** | Gestionar préstamos y devoluciones; consultar inventario y avisos. |
+| **Administrador** | Todo lo del encargado, y además gestionar equipos y cuentas. |
 
-## Requisitos
+El servidor decide qué puede hacer cada rol; la interfaz solo oculta opciones.
 
-- Node.js 20 o superior
-- Docker (para levantar PostgreSQL localmente)
+## Funciones del MVP
+
+1. **Inicio de sesión:** encargado y administrador.
+2. **Equipos y mantenimiento:** crear, editar y dar de baja equipos. Un equipo sin historial se elimina; con historial se da de baja para conservar sus registros. Cada equipo guarda su último y próximo mantenimiento.
+3. **Préstamos:** crear, ver y editar. Solo se eliminan si fueron un error, no tienen devolución y se registra el motivo.
+4. **Devoluciones:** registrar y consultar equipos activos, devueltos y vencidos.
+5. **Revisión diaria automática:** avisos de préstamos vencidos y mantenimientos pendientes.
+
+## Reglas que el servidor no deja romper
+
+- **Un equipo, un préstamo abierto:** un índice único parcial en PostgreSQL rechaza duplicados aunque lleguen al mismo tiempo.
+- **Todo o nada:** registrar el préstamo y actualizar la disponibilidad del equipo ocurren en una sola transacción.
+- **Nada se borra sin rastro:** la auditoría guarda usuario, motivo y datos mínimos de cada registro eliminado o dado de baja.
+- **Fechas coherentes:** la fecha prevista de devolución debe ser posterior a la de salida.
+
+## Revisión diaria
+
+1. Se ejecuta sola una vez al día, a la hora y zona horaria configuradas.
+2. Busca préstamos cuya fecha prevista ya pasó y mantenimientos pendientes.
+3. Crea **un solo aviso** por préstamo o mantenimiento; una clave única evita duplicados.
+4. El aviso se resuelve al registrar la devolución o el mantenimiento.
+5. Si la ejecución falla, se registra el error y la siguiente vuelve a buscar todos los vencidos.
+
+Condición: el servidor debe estar activo para que la revisión se ejecute.
+
+## Alcance
+
+**Incluido:** inventario de equipos, préstamos y devoluciones, mantenimiento por equipo, revisión diaria y avisos dentro del sistema, historial y dos roles.
+
+**Fuera del MVP:** avisos por correo, avisos por WhatsApp, códigos QR.
+
+## Modelo de datos (propuesta)
+
+- `usuarios`: encargados y administradores.
+- `equipos`: inventario, disponibilidad, último y próximo mantenimiento.
+- `prestamos`: responsable, equipo, fecha de salida, fecha prevista y fecha real de devolución.
+- `mantenimientos`: historial por equipo.
+- `avisos`: vencidos y mantenimientos pendientes, con clave única.
+- `auditoria`: usuario, motivo y datos mínimos de cada cambio sensible.
+
+## Stack
+
+| Capa | Tecnología |
+|------|------------|
+| Interfaz | React |
+| Servidor | Node.js con Express |
+| Base de datos | PostgreSQL |
+| Automatización | Tarea programada en el servidor para la revisión diaria |
 
 ## Puesta en marcha
 
-1. Levantar la base de datos:
-
-   ```bash
-   docker compose up -d db
-   ```
-
-2. Instalar dependencias (desde la raíz):
-
-   ```bash
-   npm install
-   npx playwright install chromium   # solo la primera vez, para las pruebas e2e
-   ```
-
-3. Configurar el entorno:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edita `.env` y reemplaza `SESSION_SECRET` por una cadena aleatoria larga. El servidor no arranca sin ese valor.
-
-4. Aplicar migraciones y cargar datos de demostración:
-
-   ```bash
-   npm run seed
-   ```
-
-5. Iniciar el servidor y el cliente en terminales separadas:
-
-   ```bash
-   npm run dev -w server     # API en http://localhost:3000
-   npm run dev -w client     # Interfaz en http://localhost:5173 (proxy de /api)
-   ```
+_Pendiente: se completará cuando exista el código._
 
 ## Pruebas
 
-```bash
-npm test -w server            # pruebas de la API
-npm test -w client            # pruebas de componentes
-npx playwright test           # pruebas de aceptación (requiere servidor y cliente en marcha)
-```
+_Pendiente. Deben cubrir: permisos por rol, rechazo de préstamos duplicados (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver._
 
-## Documentación
+## Plan de trabajo (propuesta)
 
-- [Diseño de la aplicación](docs/superpowers/specs/2026-10-30-reserva-salas-design.md)
-- [Plan de implementación](docs/superpowers/plans/2026-10-30-reserva-salas.md)
-
-## Licencia
-
-Pendiente de definir.
+| Semana | Trabajo |
+|--------|---------|
+| 3 | Proyecto, esquema de datos, inicio de sesión y roles |
+| 4–5 | Equipos, préstamos, reglas, devoluciones, mantenimiento, avisos y revisión diaria |
+| 8 | Pruebas de permisos, errores, concurrencia y recorrido completo |
+| 9 | Correcciones, datos de demostración y ensayo |
+| 10 | Demo Day |
