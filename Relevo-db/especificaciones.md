@@ -245,4 +245,3 @@ En `equipo` solo se guardan tres estados: disponible, prestado y de_baja. Los de
 - Traducir los errores de la base a mensajes para el usuario, por ejemplo "este equipo ya está prestado".
 - La tarea programada de la revisión diaria.
 - Datos de demostración.
-- Actualizar el README con el modelo final.
