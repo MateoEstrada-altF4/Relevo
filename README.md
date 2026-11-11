@@ -92,10 +92,13 @@ _Pendiente. Deben cubrir: permisos por rol, rechazo de préstamos duplicados (in
 
 ## Plan de trabajo (propuesta)
 
+Detalle semana por semana en [docs/planificacion.md](docs/planificacion.md).
+
 | Semana | Trabajo |
 |--------|---------|
 | 3 | Proyecto, esquema de datos, inicio de sesión y roles |
-| 4–5 | Equipos, préstamos, reglas, devoluciones, mantenimiento, avisos y revisión diaria |
-| 8 | Pruebas de permisos, errores, concurrencia y recorrido completo |
-| 9 | Correcciones, datos de demostración y ensayo |
-| 10 | Demo Day |
+| 4 | Equipos (CRUD) · **Reunión 1** a mitad de semana |
+| 5 | Préstamos con reglas de concurrencia · **Reunión 2** al final |
+| 6 | Devoluciones, activos, devueltos y vencidos, mantenimiento |
+| 7 | Historial de mantenimiento · **Reunión 3** a mitad de semana · inicio de la revisión diaria mínima |
+| 8 (primera mitad) | Revisión diaria completa, pruebas de permisos y concurrencia, datos de demostración y ensayo · **Demo Day** |
