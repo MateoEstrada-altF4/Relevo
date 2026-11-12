@@ -1,6 +1,6 @@
 # Diccionario de datos de Relevo
 
-Aquí está cada tabla de la base con sus columnas y sus restricciones. La base es PostgreSQL y los nombres de tabla van en singular. El resumen del modelo se ubica en [especificaciones.md](especificaciones.md).
+Aquí está cada tabla de la base con sus columnas y sus restricciones. La base es PostgreSQL, las tablas viven en el schema `relevo` y sus nombres van en singular. Las mismas descripciones están en la base como `COMMENT ON`. El resumen del modelo se ubica en [especificaciones.md](especificaciones.md).
 
 En las tablas, PK es clave primaria, FK clave foránea y UK un valor único. Todos los `id` se generan solos (`GENERATED ALWAYS AS IDENTITY`), menos el de `configuracion`.
 
@@ -8,6 +8,8 @@ En las tablas, PK es clave primaria, FK clave foránea y UK un valor único. Tod
 
 | Tabla | Para qué sirve | Columnas |
 |---|---|---|
+| rol | Catálogo de roles | 2 |
+| tipo_equipo | Catálogo de tipos de equipo | 2 |
 | usuario | Cuentas que entran al sistema | 10 |
 | persona | Quien recibe los equipos | 4 |
 | equipo | Inventario | 11 |
@@ -19,6 +21,28 @@ En las tablas, PK es clave primaria, FK clave foránea y UK un valor único. Tod
 | configuracion | Hora de la revisión diaria | 4 |
 | auditoria | Rastro de cambios sensibles | 7 |
 
+## rol
+
+Catálogo de roles de las cuentas. El script inserta encargado, administrador y usuario.
+
+| Columna | Tipo | Clave | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|---|
+| id | SMALLINT | PK | no | | Identificador |
+| nombre | VARCHAR(20) | UK | no | | Nombre del rol |
+
+Lo que puede hacer cada rol lo decide el servidor.
+
+## tipo_equipo
+
+Catálogo de tipos de equipo. El script inserta laptop, monitor y cable.
+
+| Columna | Tipo | Clave | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|---|
+| id | SMALLINT | PK | no | | Identificador |
+| nombre | VARCHAR(30) | UK | no | | Nombre del tipo |
+
+Para manejar un tipo nuevo (UPS, teclado) basta insertar una fila; no hay que tocar restricciones.
+
 ## usuario
 
 Las cuentas de encargados, administradores y usuarios.
@@ -29,7 +53,7 @@ Las cuentas de encargados, administradores y usuarios.
 | nombre | VARCHAR(100) | | no | | Nombre completo |
 | email | VARCHAR(150) | UK | no | | Correo con el que inicia sesión |
 | password_hash | VARCHAR(255) | | no | | Hash de la contraseña, nunca el texto |
-| rol | VARCHAR(20) | | no | | encargado, administrador o usuario |
+| rol_id | SMALLINT | FK | no | | Rol de la cuenta |
 | activo | BOOLEAN | | no | true | En false la cuenta está desactivada |
 | debe_cambiar_password | BOOLEAN | | no | true | La primera contraseña es temporal |
 | ultimo_acceso | TIMESTAMPTZ | | sí | | Último inicio de sesión |
@@ -38,13 +62,13 @@ Las cuentas de encargados, administradores y usuarios.
 
 Restricciones:
 
-- El rol solo puede ser uno de los tres valores.
+- El rol tiene que existir en la tabla `rol`.
 - El correo es único sin importar mayúsculas (índice único sobre `lower(email)`).
 - Una cuenta no se borra, se desactiva, porque otras tablas la referencian.
 
 ## persona
 
-Quien recibe un equipo. Es el nombre que se escribe en el campo "Recibe". Solo tiene cuenta si entra al sistema con el rol Usuario.
+Quien recibe un equipo. Es el nombre que se escribe en el campo "Recibe". Está separada de `usuario` porque una persona puede recibir equipo sin tener cuenta: solo la tiene si entra al sistema con el rol Usuario.
 
 | Columna | Tipo | Clave | Nulo | Por defecto | Descripción |
 |---|---|---|---|---|---|
@@ -65,10 +89,10 @@ El inventario. Cada equipo se identifica por su tipo y su número, por ejemplo "
 | Columna | Tipo | Clave | Nulo | Por defecto | Descripción |
 |---|---|---|---|---|---|
 | id | INT | PK | no | | Identificador |
-| tipo | VARCHAR(20) | UK | no | | laptop, monitor o cable |
-| numero | INT | UK | no | | Número dentro de su tipo |
+| tipo_equipo_id | SMALLINT | FK, UK | no | | Tipo de equipo |
+| numero | INT | UK | no | | Número de inventario dentro de su tipo: el 12 de "Laptop 12" |
 | numero_serie | VARCHAR(50) | UK | sí | | Número de serie, si tiene |
-| estado | VARCHAR(20) | | no | disponible | disponible, prestado o de_baja |
+| estado | VARCHAR(20) | | no | disponible | disponible, prestado, en_mantenimiento o de_baja |
 | ultimo_mantenimiento | DATE | | sí | | Fecha del último mantenimiento |
 | proximo_mantenimiento | DATE | | sí | | Fecha en que toca el siguiente |
 | frecuencia_mantenimiento_meses | INT | | sí | | Cada cuántos meses toca |
@@ -82,6 +106,8 @@ Restricciones:
 - El número de serie no se repite, aunque puede quedar vacío en varios equipos (los cables no tienen).
 - El número y la frecuencia deben ser mayores que cero.
 - El próximo mantenimiento debe ser posterior al último.
+- El tipo tiene que existir en la tabla `tipo_equipo`.
+- Un equipo en_mantenimiento está en reparación o servicio y no se presta; vuelve a disponible al registrar el mantenimiento.
 - Si el estado es de_baja tiene que haber fecha de baja, y al revés.
 - Hay índices en `estado` y en `proximo_mantenimiento`.
 
@@ -133,7 +159,7 @@ Restricciones:
 - No se puede borrar un equipo o un usuario que tenga mantenimientos.
 - Hay un índice en `equipo_id` y `fecha`.
 
-Al registrar un mantenimiento, el servidor actualiza las fechas del equipo y resuelve el aviso pendiente.
+Al registrar un mantenimiento, el servidor actualiza las fechas del equipo, lo devuelve a disponible si estaba en_mantenimiento y resuelve el aviso pendiente.
 
 ## solicitud
 
@@ -192,7 +218,7 @@ Restricciones:
 
 ## ejecucion_revision
 
-Una fila por cada vez que corre la revisión diaria.
+Bitácora de la revisión diaria, la tarea programada que cada día busca préstamos vencidos y mantenimientos pendientes y crea los avisos. Hay una fila por cada corrida, para saber si corrió, qué encontró y si falló.
 
 | Columna | Tipo | Clave | Nulo | Por defecto | Descripción |
 |---|---|---|---|---|---|
@@ -247,10 +273,12 @@ Restricciones:
 
 ## Relaciones
 
-Son 16. Todas son de uno a muchos, menos la de usuario con persona, que es de uno a uno.
+Son 18. Todas son de uno a muchos, menos la de usuario con persona, que es de uno a uno.
 
 | De | A | Columna | Obligatoria | Si se borra el primero |
 |---|---|---|---|---|
+| rol | usuario | rol_id | sí | no se permite |
+| tipo_equipo | equipo | tipo_equipo_id | sí | no se permite |
 | equipo | prestamo | equipo_id | sí | no se permite |
 | persona | prestamo | persona_id | sí | no se permite |
 | usuario | prestamo | registrado_por | sí | no se permite |
@@ -279,12 +307,12 @@ Son 16. Todas son de uno a muchos, menos la de usuario con persona, que es de un
 | Registrar devolución | prestamo, equipo |
 | Corregir fecha | prestamo, auditoria |
 | Eliminar préstamo | prestamo, auditoria |
-| Inventario y ficha del equipo | equipo, prestamo, mantenimiento |
+| Inventario y ficha del equipo | equipo, tipo_equipo, prestamo, mantenimiento |
 | Registrar mantenimiento | mantenimiento, equipo, aviso |
-| Gestión de equipos | equipo |
+| Gestión de equipos | equipo, tipo_equipo |
 | Dar de baja y eliminar equipo | equipo, auditoria |
 | Avisos | aviso, ejecucion_revision |
-| Cuentas | usuario, persona |
+| Cuentas | usuario, rol, persona |
 | Revisión diaria | configuracion, ejecucion_revision, aviso |
 | Auditoría | auditoria |
 | Mis equipos y mis préstamos | prestamo, persona |

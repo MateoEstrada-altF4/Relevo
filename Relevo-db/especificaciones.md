@@ -18,11 +18,36 @@ Cambios respecto a lo que dice el README:
 - Agregué `ejecucion_revision` y `configuracion` para la pantalla de la revisión diaria.
 - Los avisos por correo, por WhatsApp y los códigos QR quedaron descartados, no solo fuera del MVP.
 
+Cambios después de la revisión del PR:
+
+- Las tablas viven en un schema propio, `relevo`, y no en `public`.
+- El rol y el tipo de equipo pasaron de un CHECK a tablas de catálogo (`rol`, `tipo_equipo`) con clave foránea. Agregar un tipo de equipo ya no obliga a cambiar restricciones.
+- `equipo` tiene un cuarto estado, `en_mantenimiento`, para el equipo que está en reparación.
+- Todas las tablas y columnas llevan `COMMENT ON` en el script.
+
 
 
 ## Tablas
 
-Son 10 tablas, 84 columnas y 16 claves foráneas. Todos los `id` son `GENERATED ALWAYS AS IDENTITY`, menos el de `configuracion`.
+Son 12 tablas, 88 columnas y 18 claves foráneas, todas en el schema `relevo`. El script lo crea con `CREATE SCHEMA IF NOT EXISTS relevo`; la aplicación debe conectarse con `search_path = relevo` o calificar las tablas (`relevo.equipo`). Todos los `id` son `GENERATED ALWAYS AS IDENTITY`, menos el de `configuracion`.
+
+### rol
+
+Catálogo de roles. El script inserta los tres.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | SMALLINT | PK |
+| nombre | VARCHAR(20) | único: encargado, administrador o usuario |
+
+### tipo_equipo
+
+Catálogo de tipos de equipo. El script inserta laptop, monitor y cable; un tipo nuevo es una fila más.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| id | SMALLINT | PK |
+| nombre | VARCHAR(30) | único |
 
 ### usuario
 
@@ -34,7 +59,7 @@ Las cuentas que entran al sistema.
 | nombre | VARCHAR(100) | |
 | email | VARCHAR(150) | único sin distinguir mayúsculas |
 | password_hash | VARCHAR(255) | nunca la contraseña en texto |
-| rol | VARCHAR(20) | encargado, administrador o usuario |
+| rol_id | SMALLINT | FK a rol |
 | activo | BOOLEAN | por defecto true |
 | debe_cambiar_password | BOOLEAN | por defecto true, la primera contraseña es temporal |
 | ultimo_acceso | TIMESTAMPTZ | puede ser nulo |
@@ -45,7 +70,7 @@ Las cuentas no se borran, se desactivan, porque otras tablas las referencian.
 
 ### persona
 
-Quien recibe el equipo. Es lo que se escribe en el campo "Recibe" al registrar un préstamo.
+Quien recibe el equipo. Es lo que se escribe en el campo "Recibe" al registrar un préstamo. Está separada de `usuario` porque la mayoría de quienes reciben equipo no tienen cuenta: solo la tiene quien entra al sistema con el rol usuario.
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -56,15 +81,15 @@ Quien recibe el equipo. Es lo que se escribe en el campo "Recibe" al registrar u
 
 ### equipo
 
-El inventario. Un equipo se identifica por tipo y número, por ejemplo "Laptop 12".
+El inventario. Un equipo se identifica por tipo y número, por ejemplo "Laptop 12": `numero` es esa etiqueta de inventario, la que el encargado usa para ubicar el equipo.
 
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | INT | PK |
-| tipo | VARCHAR(20) | laptop, monitor o cable |
-| numero | INT | mayor que 0, no se repite dentro del tipo |
+| tipo_equipo_id | SMALLINT | FK a tipo_equipo |
+| numero | INT | número de inventario, mayor que 0, no se repite dentro del tipo |
 | numero_serie | VARCHAR(50) | opcional (los cables no tienen), único si existe |
-| estado | VARCHAR(20) | disponible, prestado o de_baja |
+| estado | VARCHAR(20) | disponible, prestado, en_mantenimiento o de_baja |
 | ultimo_mantenimiento | DATE | |
 | proximo_mantenimiento | DATE | posterior al último |
 | frecuencia_mantenimiento_meses | INT | mayor que 0 |
@@ -188,6 +213,8 @@ Registro de los cambios sensibles. Solo se inserta.
 
 | De | A | Columna | Al borrar |
 |---|---|---|---|
+| rol | usuario | rol_id | no deja |
+| tipo_equipo | equipo | tipo_equipo_id | no deja |
 | equipo | prestamo | equipo_id | no deja |
 | persona | prestamo | persona_id | no deja |
 | usuario | prestamo | registrado_por | no deja |
@@ -223,11 +250,21 @@ Estas son las reglas del README y cómo las cumple la base sin depender del serv
 Dos reglas quedan para el servidor porque la base sola no puede:
 
 - Registrar el préstamo y cambiar el estado del equipo en una misma transacción.
+- Prestar solo equipos en estado disponible (uno en mantenimiento o de baja no se presta).
 - Decidir qué puede hacer cada rol.
 
 ## Estados
 
-En `equipo` solo se guardan tres estados: disponible, prestado y de_baja. Los demás que se ven en las pantallas se calculan con las fechas, así no pueden quedar desactualizados:
+En `equipo` se guardan cuatro estados:
+
+| Estado | Significa |
+|---|---|
+| disponible | se puede prestar |
+| prestado | tiene un préstamo abierto |
+| en_mantenimiento | está en reparación o servicio; no se puede prestar. Vuelve a disponible al registrar el mantenimiento |
+| de_baja | retirado del inventario |
+
+Los demás que se ven en las pantallas se calculan con las fechas, así no pueden quedar desactualizados:
 
 | En pantalla | Se calcula así |
 |---|---|
@@ -235,7 +272,7 @@ En `equipo` solo se guardan tres estados: disponible, prestado y de_baja. Los de
 | Vence hoy | préstamo sin devolución y fecha prevista igual a hoy |
 | Vencido | préstamo sin devolución y fecha prevista antes de hoy |
 | Devuelto | préstamo con fecha de devolución |
-| Mantenimiento | `proximo_mantenimiento` de hoy o anterior |
+| Mantenimiento pendiente | `proximo_mantenimiento` de hoy o anterior (el equipo sigue disponible hasta que se envía a servicio) |
 
 
 ## Lo que falta

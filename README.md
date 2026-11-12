@@ -17,7 +17,7 @@ Aplicación web interna para registrar qué equipo tiene cada persona, cuándo d
 | [Planificación](docs/planificacion.md) | Plan de trabajo semana por semana |
 | [Especificaciones de la base de datos](Relevo-db/especificaciones.md) | Modelo final, relaciones, reglas y estados |
 | [Diccionario de datos](Relevo-db/diccionario-de-datos.md) | Tablas, columnas y restricciones |
-| [Script SQL del esquema](Relevo-db/sql/01-esquema.sql) | Crea las tablas, índices y restricciones en PostgreSQL |
+| [Script SQL del esquema](Relevo-db/sql/01-esquema.sql) | Crea el schema `relevo` con sus tablas, índices, restricciones y comentarios en PostgreSQL |
 
 Diagramas:
 
@@ -87,11 +87,13 @@ Condición: el servidor debe estar activo para que la revisión se ejecute.
 
 ## Modelo de datos
 
-Son 10 tablas en PostgreSQL, con nombres en singular:
+Son 12 tablas en PostgreSQL, dentro del schema `relevo`, con nombres en singular:
 
-- `usuario`: cuentas que entran al sistema (usuario, encargado o administrador).
+- `rol`: catálogo de roles de las cuentas.
+- `tipo_equipo`: catálogo de tipos de equipo; agregar uno nuevo es insertar una fila.
+- `usuario`: cuentas que entran al sistema, cada una con su rol.
 - `persona`: quien recibe los equipos; puede no tener cuenta.
-- `equipo`: inventario, estado, último y próximo mantenimiento.
+- `equipo`: inventario, tipo, estado (disponible, prestado, en mantenimiento o de baja), último y próximo mantenimiento.
 - `prestamo`: equipo, persona que recibe, fecha de salida, fecha prevista y fecha real de devolución.
 - `mantenimiento`: historial por equipo.
 - `solicitud`: peticiones de equipo o de más tiempo del rol Usuario.
