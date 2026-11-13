@@ -1,8 +1,8 @@
 import pg from 'pg';
-import { config } from './config.js';
+import { config } from './config.ts';
 
 // Un solo pool de conexiones para todo el servidor.
-export function crearPool(opciones = config.bd) {
+export function crearPool(opciones: pg.PoolConfig = config.bd): pg.Pool {
   const pool = new pg.Pool({
     ...opciones,
     connectionTimeoutMillis: 3000,

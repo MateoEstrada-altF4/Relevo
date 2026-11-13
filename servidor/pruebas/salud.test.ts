@@ -1,21 +1,27 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { crearApp } from '../src/app.js';
-import { crearPool } from '../src/bd.js';
+import type { AddressInfo } from 'node:net';
+import type { Server } from 'node:http';
+import type { Express } from 'express';
+import type pg from 'pg';
+import { crearApp } from '../src/app.ts';
+import type { ConsultaBd } from '../src/app.ts';
+import { crearPool } from '../src/bd.ts';
 
 // Levanta la app en un puerto libre y devuelve su URL base.
-function escuchar(app) {
+function escuchar(app: Express): Promise<{ servidor: Server; url: string }> {
   return new Promise((resolve) => {
     const servidor = app.listen(0, () => {
-      resolve({ servidor, url: `http://localhost:${servidor.address().port}` });
+      const { port } = servidor.address() as AddressInfo;
+      resolve({ servidor, url: `http://localhost:${port}` });
     });
   });
 }
 
 describe('GET /api/salud con la base de datos real', () => {
-  let pool;
-  let servidor;
-  let url;
+  let pool: pg.Pool;
+  let servidor: Server;
+  let url: string;
 
   before(async () => {
     pool = crearPool();
@@ -46,7 +52,7 @@ describe('GET /api/salud con la base de datos real', () => {
 
 describe('GET /api/salud sin base de datos', () => {
   test('responde 503 y reporta la base sin conexión', async () => {
-    const poolCaido = {
+    const poolCaido: ConsultaBd = {
       query: async () => {
         throw new Error('conexión rechazada');
       },

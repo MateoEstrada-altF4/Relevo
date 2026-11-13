@@ -1,15 +1,27 @@
 import { useEffect, useState } from 'react';
 
+// Cuerpo que devuelve GET /api/salud.
+interface RespuestaSalud {
+  servidor: 'ok';
+  bd: 'conectada' | 'sin conexión';
+  base?: string;
+  hora?: string;
+  tablas?: number;
+}
+
+type Salud =
+  { estado: 'cargando' } | { estado: 'sin-servidor' } | ({ estado: 'listo' } & RespuestaSalud);
+
 // Pantalla mínima del proyecto base: muestra si el servidor y la base responden.
 export default function App() {
-  const [salud, setSalud] = useState({ estado: 'cargando' });
+  const [salud, setSalud] = useState<Salud>({ estado: 'cargando' });
 
   useEffect(() => {
     let vigente = true;
 
     fetch('/api/salud')
       .then(async (respuesta) => {
-        const cuerpo = await respuesta.json();
+        const cuerpo = (await respuesta.json()) as RespuestaSalud;
         if (vigente) setSalud({ estado: 'listo', ...cuerpo });
       })
       .catch(() => {
@@ -35,11 +47,19 @@ export default function App() {
         <p className="mt-8 text-sky-700">Comprobando el servidor para el Issue #4…</p>
       ) : (
         <ul className="mt-8 grid list-none gap-3 p-0">
-          <Estado nombre="Servidor" ok={servidorOk} texto={servidorOk ? 'En marcha' : 'Sin respuesta'} />
+          <Estado
+            nombre="Servidor"
+            ok={servidorOk}
+            texto={servidorOk ? 'En marcha' : 'Sin respuesta'}
+          />
           <Estado
             nombre="Base de datos"
             ok={bdOk}
-            texto={bdOk ? `Conectada a "${salud.base}" (${salud.tablas} tablas en el schema relevo)` : 'Sin conexión'}
+            texto={
+              bdOk
+                ? `Conectada a "${salud.base}" (${salud.tablas} tablas en el schema relevo)`
+                : 'Sin conexión'
+            }
           />
         </ul>
       )}
@@ -47,7 +67,7 @@ export default function App() {
   );
 }
 
-function Estado({ nombre, ok, texto }) {
+function Estado({ nombre, ok, texto }: { nombre: string; ok: boolean; texto: string }) {
   return (
     <li
       className={`flex items-center gap-3 rounded-xl border border-l-4 bg-white px-5 py-4 shadow-sm shadow-sky-500/10 transition hover:-translate-y-0.5 hover:shadow-md ${

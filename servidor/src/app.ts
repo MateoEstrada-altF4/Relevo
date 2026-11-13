@@ -1,7 +1,20 @@
 import express from 'express';
+import type { Express } from 'express';
+
+// Fila que devuelve la consulta de salud.
+export interface FilaSalud {
+  base: string;
+  hora: Date;
+  tablas: number;
+}
+
+// Lo único que la app necesita del pool: así las pruebas pueden sustituirlo.
+export interface ConsultaBd {
+  query(texto: string): Promise<{ rows: FilaSalud[] }>;
+}
 
 // Crea la aplicación Express. Recibe el pool para poder sustituirlo en las pruebas.
-export function crearApp({ pool }) {
+export function crearApp({ pool }: { pool: ConsultaBd }): Express {
   const app = express();
   app.use(express.json());
 
@@ -17,7 +30,8 @@ export function crearApp({ pool }) {
       );
       res.json({ servidor: 'ok', bd: 'conectada', ...rows[0] });
     } catch (error) {
-      console.error('No se pudo consultar la base de datos:', error.message);
+      const mensaje = error instanceof Error ? error.message : String(error);
+      console.error('No se pudo consultar la base de datos:', mensaje);
       res.status(503).json({ servidor: 'ok', bd: 'sin conexión' });
     }
   });

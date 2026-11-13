@@ -16,6 +16,7 @@ export const config = {
     password: entorno.PGPASSWORD ?? 'relevo_dev',
     // Cada conexión arranca con search_path = relevo, como pide el esquema,
     // sin depender de que el usuario de la base se llame igual que el schema.
-    options: `-c search_path=${ESQUEMA}`,
+    // La zona horaria de la sesión es UTC: las fechas se guardan y viajan en UTC.
+    options: `-c search_path=${ESQUEMA} -c timezone=UTC`,
   },
 };

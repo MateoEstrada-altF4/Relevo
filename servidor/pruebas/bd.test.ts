@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { crearPool } from '../src/bd.js';
+import type pg from 'pg';
+import { crearPool } from '../src/bd.ts';
 
 describe('conexión a PostgreSQL', () => {
-  let pool;
+  let pool: pg.Pool;
 
   before(() => {
     pool = crearPool();
@@ -21,6 +22,11 @@ describe('conexión a PostgreSQL', () => {
   test('las tablas del esquema se ven sin calificar', async () => {
     const { rows } = await pool.query('select count(*)::int as roles from rol');
     assert.equal(rows[0].roles, 3);
+  });
+
+  test('cada conexión trabaja en UTC', async () => {
+    const { rows } = await pool.query('show timezone');
+    assert.equal(rows[0].TimeZone, 'UTC');
   });
 
   test('perder una conexión no tumba el servidor', () => {

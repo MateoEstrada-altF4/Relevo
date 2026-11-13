@@ -115,7 +115,7 @@ El detalle está en las [especificaciones](Relevo-db/especificaciones.md) y el [
 
 ## Puesta en marcha
 
-Requisitos: Node.js 22.9 o superior y Docker Desktop abierto.
+Requisitos: Node.js 22.18 o superior y Docker Desktop abierto.
 
 1. Copia `.env.example` como `.env` en la raíz del proyecto.
 2. Levanta la base de datos. La primera vez crea el schema `relevo` con `Relevo-db/sql/01-esquema.sql`:
