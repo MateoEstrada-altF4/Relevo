@@ -1,37 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useSalud } from './useSalud.ts';
 
-// Cuerpo que devuelve GET /api/salud.
-interface RespuestaSalud {
-  servidor: 'ok';
-  bd: 'conectada' | 'sin conexión';
-  base?: string;
-  hora?: string;
-  tablas?: number;
-}
+// Hora local de Guatemala: las fechas viajan en UTC y se convierten solo al mostrarlas.
+const formatoHora = new Intl.DateTimeFormat('es-GT', {
+  timeZone: 'America/Guatemala',
+  timeStyle: 'medium',
+});
 
-type Salud =
-  { estado: 'cargando' } | { estado: 'sin-servidor' } | ({ estado: 'listo' } & RespuestaSalud);
-
-// Pantalla mínima del proyecto base: muestra si el servidor y la base responden.
+// Pantalla mínima del proyecto base: muestra si el servidor y la base responden,
+// y lo vuelve a comprobar cada pocos segundos.
 export default function App() {
-  const [salud, setSalud] = useState<Salud>({ estado: 'cargando' });
-
-  useEffect(() => {
-    let vigente = true;
-
-    fetch('/api/salud')
-      .then(async (respuesta) => {
-        const cuerpo = (await respuesta.json()) as RespuestaSalud;
-        if (vigente) setSalud({ estado: 'listo', ...cuerpo });
-      })
-      .catch(() => {
-        if (vigente) setSalud({ estado: 'sin-servidor' });
-      });
-
-    return () => {
-      vigente = false;
-    };
-  }, []);
+  const salud = useSalud();
 
   const servidorOk = salud.estado === 'listo';
   const bdOk = servidorOk && salud.bd === 'conectada';
@@ -62,6 +40,12 @@ export default function App() {
             }
           />
         </ul>
+      )}
+
+      {salud.estado !== 'cargando' && (
+        <p className="mt-4 text-sm text-sky-700">
+          Última comprobación: {formatoHora.format(salud.comprobadoEn)} (hora de Guatemala)
+        </p>
       )}
     </main>
   );
