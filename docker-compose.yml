@@ -24,23 +24,26 @@ services:
     image: postgres:17
     container_name: relevo-db
     restart: unless-stopped
+    # Las fechas se guardan y se sirven en UTC; la conversión a hora de Guatemala
+    # se hace solo al mostrarlas. "timezone" va por parámetro porque, en un volumen
+    # ya creado, la variable TZ no cambia lo que initdb dejó en postgresql.conf.
+    command: ['postgres', '-c', 'timezone=UTC', '-c', 'log_timezone=UTC']
     environment:
       POSTGRES_DB: relevo
       POSTGRES_USER: relevo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-relevo_dev}
-      TZ: America/Guatemala
+      TZ: UTC
     ports:
-      - "127.0.0.1:5433:5432"
+      - '127.0.0.1:5433:5432'
     volumes:
       - relevo-datos:/var/lib/postgresql/data
       - ./Relevo-db/sql/01-esquema.sql:/docker-entrypoint-initdb.d/01-esquema.sql:ro
       - ./Relevo-db/sql:/sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U relevo -d relevo"]
+      test: ['CMD-SHELL', 'pg_isready -U relevo -d relevo']
       interval: 5s
       timeout: 3s
       retries: 10
 
 volumes:
   relevo-datos:
-
