@@ -108,6 +108,7 @@ El detalle está en las [especificaciones](Relevo-db/especificaciones.md) y el [
 
 | Capa | Tecnología |
 |------|------------|
+| Lenguaje | TypeScript (servidor y cliente) |
 | Interfaz | React |
 | Servidor | Node.js con Express |
 | Base de datos | PostgreSQL |
@@ -136,7 +137,7 @@ Requisitos: Node.js 22.18 o superior y Docker Desktop abierto.
    npm run dev
    ```
 
-5. Abre <http://localhost:5173>. La página muestra si el servidor responde y si la base está conectada.
+5. Abre <http://localhost:5173>. La página muestra si el servidor responde y si la base está conectada, y lo vuelve a comprobar cada 10 segundos.
 
 | Servicio | Dirección |
 |----------|-----------|
@@ -161,6 +162,10 @@ En desarrollo, el cliente reenvía las llamadas a `/api` hacia el servidor, así
 
 Si cambias `01-esquema.sql`, borra la base con `docker compose down -v` y vuelve a levantarla para que se aplique.
 
+Las fechas se guardan y viajan en UTC (la base y cada conexión del servidor usan `UTC`); la conversión a hora de Guatemala se hace solo al mostrarlas en el cliente. Si ya tenías la base creada, `docker compose up -d` aplica la zona UTC sin borrar datos.
+
+El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR. Más detalle en el [manual de los cambios de revisión](docs/manual-cambios-revision-pr.md).
+
 ## Pruebas
 
 Las dos necesitan la base levantada.
@@ -169,7 +174,7 @@ Las dos necesitan la base levantada.
 npm test
 ```
 
-Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo`; perder una conexión no tumba el servidor.
+Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo` y la zona horaria UTC; perder una conexión no tumba el servidor.
 
 ```bash
 npm run bd:pruebas
