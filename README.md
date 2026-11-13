@@ -155,6 +155,9 @@ En desarrollo, el cliente reenvía las llamadas a `/api` hacia el servidor, así
 | `npm run build` | Genera el cliente para producción en `cliente/dist` |
 | `npm run bd:levantar` | Levanta PostgreSQL |
 | `npm run bd:apagar` | Apaga PostgreSQL sin borrar los datos |
+| `npm run tipos` | Revisa los tipos de TypeScript en servidor y cliente |
+| `npm run lint` | Revisa el código con ESLint (`lint:arreglar` corrige lo que pueda) |
+| `npm run formato` | Da formato con Prettier (`formato:revisar` solo comprueba) |
 
 Si cambias `01-esquema.sql`, borra la base con `docker compose down -v` y vuelve a levantarla para que se aplique.
 

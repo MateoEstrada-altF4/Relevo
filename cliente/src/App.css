@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 body {
   @apply min-h-screen bg-sky-50 text-sky-950;
