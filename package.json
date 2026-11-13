@@ -1,0 +1,24 @@
+{
+    "name": "relevo",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Relevo: control de préstamos de equipo",
+    "workspaces": [
+        "servidor",
+        "cliente"
+    ],
+    "scripts": {
+        "dev": "concurrently -n servidor,cliente -c blue,green \"npm run dev -w servidor\" \"npm run dev -w cliente\"",
+        "test": "npm test -w servidor",
+        "build": "npm run build -w cliente",
+        "bd:levantar": "docker compose up -d",
+        "bd:apagar": "docker compose down",
+        "bd:pruebas": "docker compose exec -T db psql -U relevo -d relevo -q -f /sql/pruebas.sql"
+    },
+    "engines": {
+        "node": ">=22.9"
+    },
+    "devDependencies": {
+        "concurrently": "^10.0.7"
+    }
+}

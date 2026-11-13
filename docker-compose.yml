@@ -1,0 +1,46 @@
+# Relevo: PostgreSQL local para desarrollo y pruebas.
+#
+# Requiere Docker Desktop abierto. Desde la raíz del proyecto:
+#
+#   Levantar la base:      docker compose up -d
+#   Correr las pruebas:    docker compose exec db psql -U relevo -d relevo -f /sql/pruebas.sql
+#   Entrar a la base:      docker compose exec db psql -U relevo -d relevo
+#   Apagarla:              docker compose down
+#   Borrarla y empezar     docker compose down -v
+#   de cero:               (después, "up -d" la crea otra vez con el esquema)
+#
+# La primera vez que arranca, crea las tablas con Relevo-db/sql/01-esquema.sql.
+# Si cambias ese archivo, hay que empezar de cero para que se aplique.
+#
+# Conexión desde Express o un cliente como DBeaver:
+#   host localhost · puerto 5433 · base relevo · usuario relevo · contraseña relevo_dev
+#
+# Usa el puerto 5433 para no chocar con otro PostgreSQL que ya ocupe el 5432.
+# La contraseña es solo para tu equipo: el puerto no se abre a la red.
+# Para usar otra, define POSTGRES_PASSWORD antes de levantar la base.
+
+services:
+  db:
+    image: postgres:17
+    container_name: relevo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: relevo
+      POSTGRES_USER: relevo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-relevo_dev}
+      TZ: America/Guatemala
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - relevo-datos:/var/lib/postgresql/data
+      - ./Relevo-db/sql/01-esquema.sql:/docker-entrypoint-initdb.d/01-esquema.sql:ro
+      - ./Relevo-db/sql:/sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relevo -d relevo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  relevo-datos:
+

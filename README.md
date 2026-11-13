@@ -115,11 +115,66 @@ El detalle está en las [especificaciones](Relevo-db/especificaciones.md) y el [
 
 ## Puesta en marcha
 
-_Pendiente: se completará cuando exista el código._
+Requisitos: Node.js 22.9 o superior y Docker Desktop abierto.
+
+1. Copia `.env.example` como `.env` en la raíz del proyecto.
+2. Levanta la base de datos. La primera vez crea el schema `relevo` con `Relevo-db/sql/01-esquema.sql`:
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Instala las dependencias, una sola vez y desde la raíz:
+
+   ```bash
+   npm install
+   ```
+
+4. Arranca el cliente y el servidor juntos:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Abre <http://localhost:5173>. La página muestra si el servidor responde y si la base está conectada.
+
+| Servicio | Dirección |
+|----------|-----------|
+| Cliente (React) | <http://localhost:5173> |
+| Servidor (Express) | <http://localhost:3000> |
+| Estado del servidor y la base | <http://localhost:3000/api/salud> |
+| PostgreSQL | `localhost:5433`, base `relevo`, schema `relevo` |
+
+En desarrollo, el cliente reenvía las llamadas a `/api` hacia el servidor, así que no hace falta configurar CORS.
+
+| Comando | Qué hace |
+|---------|----------|
+| `npm run dev` | Arranca cliente y servidor con recarga automática |
+| `npm test` | Corre las pruebas del servidor |
+| `npm run bd:pruebas` | Corre las pruebas del esquema de la base |
+| `npm run build` | Genera el cliente para producción en `cliente/dist` |
+| `npm run bd:levantar` | Levanta PostgreSQL |
+| `npm run bd:apagar` | Apaga PostgreSQL sin borrar los datos |
+
+Si cambias `01-esquema.sql`, borra la base con `docker compose down -v` y vuelve a levantarla para que se aplique.
 
 ## Pruebas
 
-_Pendiente. Deben cubrir: permisos por rol, rechazo de préstamos duplicados (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver._
+Las dos necesitan la base levantada.
+
+```bash
+npm test
+```
+
+Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo`; perder una conexión no tumba el servidor.
+
+```bash
+npm run bd:pruebas
+```
+
+Pruebas del esquema: intentan romper cada regla del diccionario de datos y comprueban que la base lo impide. Corren en una transacción que termina en `ROLLBACK`, así que no dejan datos.
+
+Pendiente de cubrir en los siguientes issues: permisos por rol, rechazo de préstamos duplicados desde el servidor (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver.
 
 ## Plan de trabajo (propuesta)
 
