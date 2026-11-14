@@ -131,13 +131,19 @@ Requisitos: Node.js 22.18 o superior y Docker Desktop abierto.
    npm install
    ```
 
-4. Arranca el cliente y el servidor juntos:
+4. Crea las cuentas de desarrollo (una por rol; ver [Cuentas de desarrollo](#cuentas-de-desarrollo)):
+
+   ```bash
+   npm run bd:semilla
+   ```
+
+5. Arranca el cliente y el servidor juntos:
 
    ```bash
    npm run dev
    ```
 
-5. Abre <http://localhost:5173>. La página muestra si el servidor responde y si la base está conectada, y lo vuelve a comprobar cada 10 segundos.
+6. Abre <http://localhost:5173> e inicia sesión con una de las cuentas de desarrollo. Una vez dentro, la página muestra si el servidor responde y si la base está conectada, y lo vuelve a comprobar cada 10 segundos.
 
 | Servicio | Dirección |
 |----------|-----------|
@@ -165,7 +171,16 @@ Si cambias `01-esquema.sql`, borra la base con `docker compose down -v` y vuelve
 
 Las fechas se guardan y viajan en UTC (la base y cada conexión del servidor usan `UTC`); la conversión a hora de Guatemala se hace solo al mostrarlas en el cliente. Si ya tenías la base creada, `docker compose up -d` aplica la zona UTC sin borrar datos.
 
-El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR. Más detalle en el [manual de los cambios de revisión](docs/manual-cambios-revision-pr.md).
+Para comprobar que la base trabaja en UTC: `docker compose exec db psql -U relevo -d relevo -Atc "show timezone"` debe responder `UTC`.
+
+El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR.
+
+### Decisiones técnicas
+
+- **TypeScript sin compilar:** el servidor corre los `.ts` directamente con Node 22.18 o superior (no hay carpeta `dist`) y el cliente lo entiende Vite. Como ninguno revisa los tipos, lo hace `npm run tipos` (`tsc --noEmit`); `npm run build` también lo corre antes de construir el cliente. Reglas activas: `strict`, `erasableSyntaxOnly` (sin `enum` en el servidor) y `verbatimModuleSyntax` (los tipos se importan con `import type`).
+- **Formato y saltos de línea:** `.prettierrc` fija LF y `.gitattributes` hace que Git guarde y entregue siempre LF, para evitar los avisos de CRLF en Windows. Los `.md` no se formatean a propósito, para no reescribir tablas.
+- **Revalidación de la API:** el hook `cliente/src/useSalud.ts` consulta `/api/salud` al cargar y cada 10 segundos. No consulta con la pestaña oculta y actualiza al volver. Para probarlo, apaga la base (`npm run bd:apagar`) sin recargar la página: en menos de 10 segundos pasa a rojo y se recupera sola al volver a levantarla.
+- **Sin ORM (Prisma) por ahora:** el esquema ya está escrito en SQL (`01-esquema.sql`) y lo verifican 113 pruebas directamente sobre la base. Un ORM obligaría a rehacer ambos. Queda abierto para decidirlo más adelante con el equipo.
 
 ## Inicio de sesión y roles
 
@@ -179,6 +194,22 @@ El cliente incluye la pantalla de inicio de sesión: sin sesión muestra el logi
 | `POST /api/auth/logout` | Cierra la sesión (borra la cookie) |
 | `GET /api/auth/yo` | Devuelve la cuenta de la sesión actual |
 | `POST /api/auth/cambiar-password` | Cambia la contraseña con `{ passwordActual, passwordNueva }`; es lo único que permite el servidor mientras la contraseña sea temporal |
+
+### Cuentas de desarrollo
+
+`npm run bd:semilla` crea (o restablece) estas tres cuentas, una por rol. Son solo para desarrollo: el correo usa el dominio `.test`, que está reservado y nunca existirá de verdad, y el script se niega a correr con `NODE_ENV=production`. Las contraseñas son las de `.env.example`; si cambias las de tu `.env`, la semilla usa las tuyas.
+
+| Rol | Correo | Contraseña |
+|-----|--------|------------|
+| Administrador | `administrador@relevo.test` | `Admin-Relevo-7391` |
+| Encargado | `encargado@relevo.test` | `Encargado-Relevo-4852` |
+| Usuario | `usuario@relevo.test` | `Usuario-Relevo-2064` |
+
+Las tres entran directo. El cambio obligatorio de contraseña se prueba marcando una cuenta como temporal:
+
+```bash
+docker compose exec -T db psql -U relevo -d relevo -c "update relevo.usuario set debe_cambiar_password = true where email = 'usuario@relevo.test'"
+```
 
 Variables de `.env` (ver `.env.example`):
 
