@@ -5,8 +5,8 @@ import type { Server } from 'node:http';
 import type { Express } from 'express';
 import type pg from 'pg';
 import { crearApp } from '../src/app.ts';
-import type { ConsultaBd } from '../src/app.ts';
 import { crearPool } from '../src/bd.ts';
+import type { ConsultaBd } from '../src/bd.ts';
 
 // Levanta la app en un puerto libre y devuelve su URL base.
 function escuchar(app: Express): Promise<{ servidor: Server; url: string }> {

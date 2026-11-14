@@ -153,6 +153,7 @@ En desarrollo, el cliente reenvía las llamadas a `/api` hacia el servidor, así
 | `npm run dev` | Arranca cliente y servidor con recarga automática |
 | `npm test` | Corre las pruebas del servidor |
 | `npm run bd:pruebas` | Corre las pruebas del esquema de la base |
+| `npm run bd:semilla` | Crea (o restablece) una cuenta de desarrollo por rol |
 | `npm run build` | Genera el cliente para producción en `cliente/dist` |
 | `npm run bd:levantar` | Levanta PostgreSQL |
 | `npm run bd:apagar` | Apaga PostgreSQL sin borrar los datos |
@@ -166,6 +167,26 @@ Las fechas se guardan y viajan en UTC (la base y cada conexión del servidor usa
 
 El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR. Más detalle en el [manual de los cambios de revisión](docs/manual-cambios-revision-pr.md).
 
+## Inicio de sesión y roles
+
+El servidor identifica a cada persona con una cookie de sesión (`relevo_sesion`, `HttpOnly`, 8 horas) y, en cada petición, vuelve a leer su cuenta en la base: desactivar una cuenta o cambiarle el rol surte efecto de inmediato. Los tres roles (`encargado`, `administrador` y `usuario`) pueden iniciar sesión; lo que puede hacer cada uno lo decide el servidor con `exigirRol(...)`. Explicación completa en el [manual de inicio de sesión y roles](docs/manual-inicio-sesion-y-roles.md).
+
+El cliente incluye la pantalla de inicio de sesión: sin sesión muestra el login; con la contraseña temporal solo deja cambiarla; con sesión normal muestra el estado del servidor y la base, con el nombre y el rol de quien entró y un botón para cerrar sesión. Cada rol tiene su color (administrador índigo, encargado celeste, usuario verde; sin sesión, gris neutro) y la pantalla se adapta al tamaño de la ventana, del celular al monitor ancho. Para probarla, corre `npm run bd:semilla` y entra con una de las cuentas de desarrollo.
+
+| Ruta | Qué hace |
+|------|----------|
+| `POST /api/auth/login` | Inicia sesión con `{ email, password }` y entrega la cookie |
+| `POST /api/auth/logout` | Cierra la sesión (borra la cookie) |
+| `GET /api/auth/yo` | Devuelve la cuenta de la sesión actual |
+| `POST /api/auth/cambiar-password` | Cambia la contraseña con `{ passwordActual, passwordNueva }`; es lo único que permite el servidor mientras la contraseña sea temporal |
+
+Variables de `.env` (ver `.env.example`):
+
+| Variable | Para qué sirve |
+|----------|----------------|
+| `SESION_SECRETO` | Clave con la que se firman las sesiones (mínimo 32 caracteres). Obligatoria con `NODE_ENV=production` |
+| `SEMILLA_PASSWORD_ADMINISTRADOR`, `SEMILLA_PASSWORD_ENCARGADO` y `SEMILLA_PASSWORD_USUARIO` | Contraseña de cada cuenta de desarrollo que crea `npm run bd:semilla` (`administrador@`, `encargado@` y `usuario@relevo.test`). Cada cuenta tiene la suya: la semilla se niega a repetirlas |
+
 ## Pruebas
 
 Las dos necesitan la base levantada.
@@ -174,7 +195,7 @@ Las dos necesitan la base levantada.
 npm test
 ```
 
-Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo` y la zona horaria UTC; perder una conexión no tumba el servidor.
+Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo` y la zona horaria UTC; perder una conexión no tumba el servidor. También se prueban las contraseñas (`scrypt`), los tokens firmados, el inicio y cierre de sesión, el cambio de contraseña temporal, el límite de intentos, y los middlewares `autenticar` y `exigirRol` (401 sin sesión, 403 sin permiso, y que desactivar una cuenta o cambiarle el rol surte efecto sin esperar a que caduque el token).
 
 ```bash
 npm run bd:pruebas
@@ -182,7 +203,7 @@ npm run bd:pruebas
 
 Pruebas del esquema: intentan romper cada regla del diccionario de datos y comprueban que la base lo impide. Corren en una transacción que termina en `ROLLBACK`, así que no dejan datos.
 
-Pendiente de cubrir en los siguientes issues: permisos por rol, rechazo de préstamos duplicados desde el servidor (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver.
+Pendiente de cubrir en los siguientes issues: permisos por rol en cada ruta de negocio (equipos, préstamos, etc.), rechazo de préstamos duplicados desde el servidor (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver.
 
 ## Plan de trabajo (propuesta)
 
