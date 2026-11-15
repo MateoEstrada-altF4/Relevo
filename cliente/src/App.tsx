@@ -110,7 +110,7 @@ function PanelEstado() {
   return (
     <>
       {salud.estado === 'cargando' ? (
-        <p className="mt-8 text-tema-700">Comprobando el servidor para el Issue #4…</p>
+        <p className="mt-8 text-tema-700">Comprobando el servidor…</p>
       ) : (
         <ul className="mt-6 grid list-none gap-3 p-0 md:grid-cols-2">
           <Estado

@@ -124,7 +124,7 @@ Cuesta una consulta pequeña por petición, algo irrelevante a esta escala, y a 
 Sin ella, un token robado seguiría sirviendo hasta 8 horas **aunque la víctima cambie su contraseña**, que es justo lo que haría al sospechar del robo. Con la huella, cambiar la contraseña cambia el hash guardado, la huella ya no coincide y todas las sesiones anteriores dejan de valer. Quien cambia la contraseña recibe en esa misma respuesta una sesión nueva, así que no se ve expulsado. Se eligió la contraseña y no `actualizado_en` para que un cambio de rol no cierre la sesión de nadie.
 
 ### Limitación conocida: el logout no revoca el token
-Cerrar sesión borra la cookie del navegador, pero un token ya copiado seguiría siendo válido hasta caducar (8 horas) o hasta que la contraseña cambie. Es el precio de las sesiones sin estado en el servidor (el enfoque B que elegimos, que evita agregar una tabla). Si se quisiera revocar al instante habría que guardar sesiones en la base (enfoque A).
+Cerrar sesión borra la cookie del navegador, pero un token ya copiado seguiría siendo válido hasta caducar (8 horas) o hasta que la contraseña cambie. Es el precio de las sesiones sin estado en el servidor, que evitan agregar una tabla. Si se quisiera revocar al instante habría que guardar las sesiones en la base.
 
 
 ### Cuando la base falla
