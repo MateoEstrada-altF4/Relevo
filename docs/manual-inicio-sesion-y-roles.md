@@ -2,8 +2,6 @@
 
 Este manual explica qué se construyó para el Issue #6, **por qué existe cada pieza y qué pasaría si no estuviera**, y cómo comprobarlo tú mismo. Todas las salidas que aparecen son reales: salieron de correr el servidor y las pruebas.
 
-> Esta carpeta (`Relevo-login`) es el proyecto de prueba. Usa su propia base de datos en el puerto **5434** para no mezclar datos con la de `Relevo` (5433). El resto es idéntico al repo oficial.
-
 ## Resumen de lo que se agregó
 
 | Pieza | Archivo | Para qué sirve |
@@ -265,22 +263,16 @@ Pruebas del esquema (no cambiaron): `npm run bd:pruebas` → 113 correctas.
 
 ---
 
-## 10. Llevarlo al repo oficial
+## 10. Antes de abrir un PR
 
-Archivos **nuevos** (copiar tal cual): `servidor/src/auth/` (5 archivos), `servidor/src/semilla.ts`, `servidor/src/sembrar.ts`, `servidor/pruebas/auth/` (5 archivos), `servidor/pruebas/ayudas.ts`, `servidor/pruebas/config.test.ts`, `servidor/pruebas/semilla.test.ts`, este manual y, si quieres la pantalla de login, `cliente/src/useSesion.ts`, `Login.tsx`, `CambiarPassword.tsx` y `formulario.tsx` (sección 12). En ese caso, `cliente/src/App.tsx` también se modifica.
-
-Archivos **modificados** (aplicar los cambios, no reemplazar): `servidor/src/app.ts`, `servidor/src/bd.ts`, `servidor/src/config.ts`, `servidor/pruebas/salud.test.ts` (solo el import de `ConsultaBd`), `package.json` (script `bd:semilla`), `servidor/package.json` (script `semilla`), `.env.example` (`SESION_SECRETO` y las tres `SEMILLA_PASSWORD_*`) y `README.md`.
-
-Dependencias: en el repo oficial, correr
 ```bash
-npm install jose cookie-parser express-rate-limit -w servidor
-npm install -D @types/cookie-parser -w servidor
+npm run tipos
+npm run lint
+npm run formato:revisar
+npm test
 ```
-en lugar de copiar `package-lock.json` (en la copia cambió mucho por simples espacios).
 
-**No copiar** de esta carpeta: `docker-compose.yml` ni el `PGPORT=5434` de `.env.example`; son solo para aislar la base de prueba.
-
-Antes de abrir el PR: `npm run tipos`, `npm run lint`, `npm run formato:revisar` y `npm test`.
+Las pruebas necesitan la base levantada y las variables `SEMILLA_PASSWORD_*` en tu `.env` (copiadas de `.env.example`).
 
 ## 11. Limitaciones conocidas
 
