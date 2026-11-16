@@ -131,13 +131,19 @@ Requisitos: Node.js 22.18 o superior y Docker Desktop abierto.
    npm install
    ```
 
-4. Arranca el cliente y el servidor juntos:
+4. Crea las cuentas de desarrollo (una por rol; ver [Cuentas de desarrollo](#cuentas-de-desarrollo)):
+
+   ```bash
+   npm run bd:semilla
+   ```
+
+5. Arranca el cliente y el servidor juntos:
 
    ```bash
    npm run dev
    ```
 
-5. Abre <http://localhost:5173>. La página muestra si el servidor responde y si la base está conectada, y lo vuelve a comprobar cada 10 segundos.
+6. Abre <http://localhost:5173> e inicia sesión con una de las cuentas de desarrollo. Una vez dentro, la página muestra si el servidor responde y si la base está conectada, y lo vuelve a comprobar cada 10 segundos.
 
 | Servicio | Dirección |
 |----------|-----------|
@@ -153,6 +159,7 @@ En desarrollo, el cliente reenvía las llamadas a `/api` hacia el servidor, así
 | `npm run dev` | Arranca cliente y servidor con recarga automática |
 | `npm test` | Corre las pruebas del servidor |
 | `npm run bd:pruebas` | Corre las pruebas del esquema de la base |
+| `npm run bd:semilla` | Crea (o restablece) una cuenta de desarrollo por rol |
 | `npm run build` | Genera el cliente para producción en `cliente/dist` |
 | `npm run bd:levantar` | Levanta PostgreSQL |
 | `npm run bd:apagar` | Apaga PostgreSQL sin borrar los datos |
@@ -164,7 +171,52 @@ Si cambias `01-esquema.sql`, borra la base con `docker compose down -v` y vuelve
 
 Las fechas se guardan y viajan en UTC (la base y cada conexión del servidor usan `UTC`); la conversión a hora de Guatemala se hace solo al mostrarlas en el cliente. Si ya tenías la base creada, `docker compose up -d` aplica la zona UTC sin borrar datos.
 
-El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR. Más detalle en el [manual de los cambios de revisión](docs/manual-cambios-revision-pr.md).
+Para comprobar que la base trabaja en UTC: `docker compose exec db psql -U relevo -d relevo -Atc "show timezone"` debe responder `UTC`.
+
+El código sigue el formato de Prettier (saltos de línea LF) y las reglas de ESLint; corre `npm run tipos`, `npm run lint` y `npm run formato:revisar` antes de abrir un PR.
+
+### Decisiones técnicas
+
+- **TypeScript sin compilar:** el servidor corre los `.ts` directamente con Node 22.18 o superior (no hay carpeta `dist`) y el cliente lo entiende Vite. Como ninguno revisa los tipos, lo hace `npm run tipos` (`tsc --noEmit`); `npm run build` también lo corre antes de construir el cliente. Reglas activas: `strict`, `erasableSyntaxOnly` (sin `enum` en el servidor) y `verbatimModuleSyntax` (los tipos se importan con `import type`).
+- **Formato y saltos de línea:** `.prettierrc` fija LF y `.gitattributes` hace que Git guarde y entregue siempre LF, para evitar los avisos de CRLF en Windows. Los `.md` no se formatean a propósito, para no reescribir tablas.
+- **Revalidación de la API:** el hook `cliente/src/useSalud.ts` consulta `/api/salud` al cargar y cada 10 segundos. No consulta con la pestaña oculta y actualiza al volver. Para probarlo, apaga la base (`npm run bd:apagar`) sin recargar la página: en menos de 10 segundos pasa a rojo y se recupera sola al volver a levantarla.
+- **Sin ORM (Prisma) por ahora:** el esquema ya está escrito en SQL (`01-esquema.sql`) y lo verifican 113 pruebas directamente sobre la base. Un ORM obligaría a rehacer ambos. Queda abierto para decidirlo más adelante con el equipo.
+
+## Inicio de sesión y roles
+
+El servidor identifica a cada persona con una cookie de sesión (`relevo_sesion`, `HttpOnly`, 8 horas) y, en cada petición, vuelve a leer su cuenta en la base: desactivar una cuenta o cambiarle el rol surte efecto de inmediato. Los tres roles (`encargado`, `administrador` y `usuario`) pueden iniciar sesión; lo que puede hacer cada uno lo decide el servidor con `exigirRol(...)`. Explicación completa en el [manual de inicio de sesión y roles](docs/manual-inicio-sesion-y-roles.md).
+
+El cliente incluye la pantalla de inicio de sesión: sin sesión muestra el login; con la contraseña temporal solo deja cambiarla; con sesión normal muestra el estado del servidor y la base, con el nombre y el rol de quien entró y un botón para cerrar sesión. Cada rol tiene su color (administrador índigo, encargado celeste, usuario verde; sin sesión, gris neutro) y la pantalla se adapta al tamaño de la ventana, del celular al monitor ancho. Para probarla, corre `npm run bd:semilla` y entra con una de las cuentas de desarrollo.
+
+| Ruta | Qué hace |
+|------|----------|
+| `POST /api/auth/login` | Inicia sesión con `{ email, password }` y entrega la cookie |
+| `POST /api/auth/logout` | Cierra la sesión (borra la cookie) |
+| `GET /api/auth/yo` | Devuelve la cuenta de la sesión actual |
+| `POST /api/auth/cambiar-password` | Cambia la contraseña con `{ passwordActual, passwordNueva }`; es lo único que permite el servidor mientras la contraseña sea temporal |
+
+### Cuentas de desarrollo
+
+`npm run bd:semilla` crea (o restablece) estas tres cuentas, una por rol. Son solo para desarrollo: el correo usa el dominio `.test`, que está reservado y nunca existirá de verdad, y el script se niega a correr con `NODE_ENV=production`. Las contraseñas son las de `.env.example`; si cambias las de tu `.env`, la semilla usa las tuyas.
+
+| Rol | Correo | Contraseña |
+|-----|--------|------------|
+| Administrador | `administrador@relevo.test` | `Admin-Relevo-7391` |
+| Encargado | `encargado@relevo.test` | `Encargado-Relevo-4852` |
+| Usuario | `usuario@relevo.test` | `Usuario-Relevo-2064` |
+
+Las tres entran directo. El cambio obligatorio de contraseña se prueba marcando una cuenta como temporal:
+
+```bash
+docker compose exec -T db psql -U relevo -d relevo -c "update relevo.usuario set debe_cambiar_password = true where email = 'usuario@relevo.test'"
+```
+
+Variables de `.env` (ver `.env.example`):
+
+| Variable | Para qué sirve |
+|----------|----------------|
+| `SESION_SECRETO` | Clave con la que se firman las sesiones (mínimo 32 caracteres). Obligatoria con `NODE_ENV=production` |
+| `SEMILLA_PASSWORD_ADMINISTRADOR`, `SEMILLA_PASSWORD_ENCARGADO` y `SEMILLA_PASSWORD_USUARIO` | Contraseña de cada cuenta de desarrollo que crea `npm run bd:semilla` (`administrador@`, `encargado@` y `usuario@relevo.test`). Cada cuenta tiene la suya: la semilla se niega a repetirlas |
 
 ## Pruebas
 
@@ -174,7 +226,7 @@ Las dos necesitan la base levantada.
 npm test
 ```
 
-Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo` y la zona horaria UTC; perder una conexión no tumba el servidor.
+Pruebas del servidor: `/api/salud` responde 200 con la base conectada, 503 si la base no responde y 404 en rutas desconocidas; cada conexión usa el schema `relevo` y la zona horaria UTC; perder una conexión no tumba el servidor. También se prueban las contraseñas (`scrypt`), los tokens firmados, el inicio y cierre de sesión, el cambio de contraseña temporal, el límite de intentos, y los middlewares `autenticar` y `exigirRol` (401 sin sesión, 403 sin permiso, y que desactivar una cuenta o cambiarle el rol surte efecto sin esperar a que caduque el token).
 
 ```bash
 npm run bd:pruebas
@@ -182,7 +234,7 @@ npm run bd:pruebas
 
 Pruebas del esquema: intentan romper cada regla del diccionario de datos y comprueban que la base lo impide. Corren en una transacción que termina en `ROLLBACK`, así que no dejan datos.
 
-Pendiente de cubrir en los siguientes issues: permisos por rol, rechazo de préstamos duplicados desde el servidor (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver.
+Pendiente de cubrir en los siguientes issues: permisos por rol en cada ruta de negocio (equipos, préstamos, etc.), rechazo de préstamos duplicados desde el servidor (incluso concurrentes), repetición de la revisión sin duplicar avisos y el recorrido completo de crear, consultar, corregir, eliminar con motivo y devolver.
 
 ## Plan de trabajo (propuesta)
 

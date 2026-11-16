@@ -15,6 +15,7 @@
     "bd:levantar": "docker compose up -d",
     "bd:apagar": "docker compose down",
     "bd:pruebas": "docker compose exec -T db psql -U relevo -d relevo -q -f /sql/pruebas.sql",
+    "bd:semilla": "npm run semilla -w servidor",
     "lint": "eslint .",
     "lint:arreglar": "eslint . --fix",
     "formato": "prettier --write .",

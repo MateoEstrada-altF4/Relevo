@@ -1,5 +1,9 @@
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import type { Express } from 'express';
+import { crearRutasAuth, manejarErrores } from './auth/rutas.ts';
+import type { LimiteLogin } from './auth/rutas.ts';
+import type { ConsultaBd } from './bd.ts';
 
 // Fila que devuelve la consulta de salud.
 export interface FilaSalud {
@@ -8,20 +12,25 @@ export interface FilaSalud {
   tablas: number;
 }
 
-// Lo único que la app necesita del pool: así las pruebas pueden sustituirlo.
-export interface ConsultaBd {
-  query(texto: string): Promise<{ rows: FilaSalud[] }>;
-}
+// Por defecto: 10 intentos fallidos de inicio de sesión cada 15 minutos por dirección.
+const LIMITE_LOGIN_POR_DEFECTO: LimiteLogin = { maximo: 10, ventanaMs: 15 * 60 * 1000 };
 
 // Crea la aplicación Express. Recibe el pool para poder sustituirlo en las pruebas.
-export function crearApp({ pool }: { pool: ConsultaBd }): Express {
+export function crearApp({
+  pool,
+  limiteLogin = LIMITE_LOGIN_POR_DEFECTO,
+}: {
+  pool: ConsultaBd;
+  limiteLogin?: LimiteLogin;
+}): Express {
   const app = express();
   app.use(express.json());
+  app.use(cookieParser());
 
   // Estado del servidor y de la conexión a PostgreSQL.
   app.get('/api/salud', async (_req, res) => {
     try {
-      const { rows } = await pool.query(
+      const { rows } = await pool.query<FilaSalud>(
         `select current_database() as base,
                 now() as hora,
                 (select count(*)::int
@@ -36,9 +45,13 @@ export function crearApp({ pool }: { pool: ConsultaBd }): Express {
     }
   });
 
+  app.use('/api/auth', crearRutasAuth({ bd: pool, limiteLogin }));
+
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Ruta no encontrada' });
   });
+
+  app.use(manejarErrores);
 
   return app;
 }

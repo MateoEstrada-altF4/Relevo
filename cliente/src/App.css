@@ -1,5 +1,91 @@
 @import 'tailwindcss';
 
+/*
+ * Tema de color por rol.
+ *
+ * Los componentes no usan colores concretos (sky, blue...), sino clases "tema-*":
+ * bg-tema-50, text-tema-900, border-tema-200, etc. Qué color es cada "tema-*" lo
+ * decide el atributo data-tema del <html> (lo pone App.tsx según el rol de la sesión).
+ * Así, cambiar de rol cambia toda la pantalla sin tocar ningún componente.
+ *
+ *   sin sesión     → neutro (gris azulado)
+ *   administrador  → índigo (azul violáceo)
+ *   encargado      → celeste
+ *   usuario        → verde
+ */
+@theme inline {
+  --color-tema-50: var(--tema-50);
+  --color-tema-100: var(--tema-100);
+  --color-tema-200: var(--tema-200);
+  --color-tema-300: var(--tema-300);
+  --color-tema-400: var(--tema-400);
+  --color-tema-500: var(--tema-500);
+  --color-tema-600: var(--tema-600);
+  --color-tema-700: var(--tema-700);
+  --color-tema-800: var(--tema-800);
+  --color-tema-900: var(--tema-900);
+  --color-tema-950: var(--tema-950);
+}
+
+/* Cada tema asigna una escala completa de la paleta de Tailwind. */
+:root,
+[data-tema='neutro'] {
+  --tema-50: var(--color-slate-50);
+  --tema-100: var(--color-slate-100);
+  --tema-200: var(--color-slate-200);
+  --tema-300: var(--color-slate-300);
+  --tema-400: var(--color-slate-400);
+  --tema-500: var(--color-slate-500);
+  --tema-600: var(--color-slate-600);
+  --tema-700: var(--color-slate-700);
+  --tema-800: var(--color-slate-800);
+  --tema-900: var(--color-slate-900);
+  --tema-950: var(--color-slate-950);
+}
+
+[data-tema='administrador'] {
+  --tema-50: var(--color-indigo-50);
+  --tema-100: var(--color-indigo-100);
+  --tema-200: var(--color-indigo-200);
+  --tema-300: var(--color-indigo-300);
+  --tema-400: var(--color-indigo-400);
+  --tema-500: var(--color-indigo-500);
+  --tema-600: var(--color-indigo-600);
+  --tema-700: var(--color-indigo-700);
+  --tema-800: var(--color-indigo-800);
+  --tema-900: var(--color-indigo-900);
+  --tema-950: var(--color-indigo-950);
+}
+
+[data-tema='encargado'] {
+  --tema-50: var(--color-sky-50);
+  --tema-100: var(--color-sky-100);
+  --tema-200: var(--color-sky-200);
+  --tema-300: var(--color-sky-300);
+  --tema-400: var(--color-sky-400);
+  --tema-500: var(--color-sky-500);
+  --tema-600: var(--color-sky-600);
+  --tema-700: var(--color-sky-700);
+  --tema-800: var(--color-sky-800);
+  --tema-900: var(--color-sky-900);
+  --tema-950: var(--color-sky-950);
+}
+
+[data-tema='usuario'] {
+  --tema-50: var(--color-emerald-50);
+  --tema-100: var(--color-emerald-100);
+  --tema-200: var(--color-emerald-200);
+  --tema-300: var(--color-emerald-300);
+  --tema-400: var(--color-emerald-400);
+  --tema-500: var(--color-emerald-500);
+  --tema-600: var(--color-emerald-600);
+  --tema-700: var(--color-emerald-700);
+  --tema-800: var(--color-emerald-800);
+  --tema-900: var(--color-emerald-900);
+  --tema-950: var(--color-emerald-950);
+}
+
+/* "dvh" = alto real de la ventana (en el móvil descuenta la barra del navegador). */
 body {
-  @apply min-h-screen bg-sky-50 text-sky-950;
+  @apply min-h-dvh bg-tema-50 text-tema-950 transition-colors;
 }
