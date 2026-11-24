@@ -129,6 +129,19 @@ describe('POST /api/usuarios (registro, solo administrador)', () => {
     assert.match(rows[0].password_hash, /^scrypt\$/);
     assert.notEqual(rows[0].password_hash, PASSWORD_TEMPORAL);
     assert.equal(rows[0].debe_cambiar_password, true);
+
+    // El rastro: quién la creó (un administrador), qué cuenta y con qué rol. Sin el hash.
+    const auditoria = await pool.query(
+      `select a.datos, u.email as autor, r.nombre as rol_autor
+         from auditoria a
+         join usuario u on u.id = a.usuario_id
+         join rol r on r.id = u.rol_id
+        where a.accion = 'crear_cuenta' and a.registro_id = $1`,
+      [r.cuerpo?.usuario?.id],
+    );
+    assert.equal(auditoria.rows.length, 1);
+    assert.deepEqual(auditoria.rows[0].datos, { email: datos.email, rol: 'encargado' });
+    assert.equal(auditoria.rows[0].rol_autor, 'administrador');
   });
 
   test('la cuenta creada puede iniciar sesión con la contraseña temporal', async () => {
@@ -152,6 +165,13 @@ describe('POST /api/usuarios (registro, solo administrador)', () => {
     assert.equal((await registrar(datos, cookie)).estado, 201);
     const repetido = await registrar({ ...datos, email: datos.email.toUpperCase() }, cookie);
     assert.equal(repetido.estado, 409);
+
+    // El intento rechazado no deja rastro: solo hay una anotación de creación.
+    const { rows } = await pool.query(
+      `select 1 from auditoria where accion = 'crear_cuenta' and lower(datos->>'email') = $1`,
+      [datos.email.toLowerCase()],
+    );
+    assert.equal(rows.length, 1);
   });
 
   test('datos inválidos: 400', async () => {

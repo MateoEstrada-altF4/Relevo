@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { ConsultaBd } from '../bd.ts';
 import { hashearPassword, LARGO_PASSWORD } from './contrasenas.ts';
-import { autenticar, exigirPasswordVigente, exigirRol } from './middleware.ts';
+import { autenticar, exigirPasswordVigente, exigirRol, usuarioActual } from './middleware.ts';
 import { conBd } from './rutas.ts';
 import { crearUsuario, ROLES } from './usuarios.ts';
 import type { Rol } from './usuarios.ts';
@@ -67,6 +67,7 @@ export function crearRutasUsuarios({ bd }: { bd: ConsultaBd }): Router {
         email: email.trim().toLowerCase(),
         rol,
         passwordHash: await hashearPassword(passwordTemporal),
+        creadoPor: usuarioActual(res).id,
       });
       if (!usuario) {
         res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });

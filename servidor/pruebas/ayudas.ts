@@ -38,7 +38,13 @@ export async function crearUsuarioDePrueba(
   return { id: rows[0].id, email, password };
 }
 
-// Borra las cuentas de prueba de una etiqueta.
+// Borra las cuentas de prueba de una etiqueta, junto con el rastro de auditoría que dejaron
+// (la auditoría apunta a la cuenta con ON DELETE RESTRICT: sin borrarla primero, no se podría).
 export async function borrarUsuariosDePrueba(bd: ConsultaBd, etiqueta: string): Promise<void> {
-  await bd.query(`delete from usuario where email like $1`, [`prueba-${etiqueta}-%@relevo.test`]);
+  const patron = `prueba-${etiqueta}-%@relevo.test`;
+  await bd.query(
+    `delete from auditoria where usuario_id in (select id from usuario where email like $1)`,
+    [patron],
+  );
+  await bd.query(`delete from usuario where email like $1`, [patron]);
 }
