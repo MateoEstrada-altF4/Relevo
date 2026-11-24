@@ -1,0 +1,184 @@
+{
+  "info": {
+    "_postman_id": "7d6b1c0e-5a4e-4c1f-9c55-2f0a6e1b7a10",
+    "name": "Relevo login y registro (puerto 3100)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Registrar sin sesion (espera 401)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Tu Prueba\",\n  \"email\": \"tu.prueba@relevo.test\",\n  \"rol\": \"usuario\",\n  \"passwordTemporal\": \"Temporal-12345\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/usuarios",
+          "host": ["{{base}}"],
+          "path": ["api", "usuarios"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Login como usuario (espera 200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"usuario@relevo.test\",\n  \"password\": \"Usuario-Relevo-2064\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/auth/login",
+          "host": ["{{base}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Registrar como usuario (espera 403)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Tu Prueba\",\n  \"email\": \"tu.prueba@relevo.test\",\n  \"rol\": \"usuario\",\n  \"passwordTemporal\": \"Temporal-12345\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/usuarios",
+          "host": ["{{base}}"],
+          "path": ["api", "usuarios"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Login como administrador (espera 200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"administrador@relevo.test\",\n  \"password\": \"Admin-Relevo-7391\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/auth/login",
+          "host": ["{{base}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Registrar como administrador (espera 201, repetida 409)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Tu Prueba\",\n  \"email\": \"tu.prueba@relevo.test\",\n  \"rol\": \"usuario\",\n  \"passwordTemporal\": \"Temporal-12345\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/usuarios",
+          "host": ["{{base}}"],
+          "path": ["api", "usuarios"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6. Login con la cuenta nueva (espera 200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"tu.prueba@relevo.test\",\n  \"password\": \"Temporal-12345\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base}}/api/auth/login",
+          "host": ["{{base}}"],
+          "path": ["api", "auth", "login"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base",
+      "value": "http://localhost:3100",
+      "type": "string"
+    }
+  ]
+}
