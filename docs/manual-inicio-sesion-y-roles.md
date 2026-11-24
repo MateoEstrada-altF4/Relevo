@@ -140,6 +140,10 @@ Si la consulta falla, la respuesta es **503 `Servicio no disponible`** (no 401: 
 | `POST /api/auth/logout` | No | 204 y la cookie queda vacía |
 | `GET /api/auth/yo` | Sí | 200 con la cuenta de la sesión |
 | `POST /api/auth/cambiar-password` | Sí | 204 con una cookie nueva · 400 · 401 |
+| `POST /api/usuarios` | Sí, solo administrador | 201 con la cuenta creada · 400 · 401 · 403 · 409 |
+
+### El registro: `POST /api/usuarios`
+Es la ruta que usa los tres middlewares en orden: `autenticar` (401 si no hay sesión), `exigirPasswordVigente` (403 si el administrador aún usa su contraseña temporal) y `exigirRol('administrador')` (403 si el rol no alcanza). El cuerpo lleva `nombre`, `email`, `rol` (`usuario`, `encargado` o `administrador`) y `passwordTemporal` (10 a 128 caracteres). La cuenta nace con `debe_cambiar_password = true`, así que quien la recibe debe cambiar la contraseña al entrar. Un correo repetido, aunque cambien las mayúsculas, responde 409. La contraseña se guarda con el mismo hash que el resto y nunca vuelve en la respuesta.
 
 ### El login, paso a paso
 1. **Valida el cuerpo.** Debe traer `email` y `password` como texto, con largos razonables. Si no, 400. Esto va primero para no gastar `scrypt` en basura, y porque `{"email": {"$ne": 1}}` no debe llegar jamás a una consulta.

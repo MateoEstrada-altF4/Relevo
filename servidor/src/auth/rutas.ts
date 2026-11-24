@@ -21,7 +21,7 @@ export interface LimiteLogin {
 
 const FALLO_LOGIN = { error: 'Correo o contraseña incorrectos' };
 const DATOS_INVALIDOS = { error: 'Datos de inicio de sesión inválidos' };
-const NO_DISPONIBLE = { error: 'Servicio no disponible' };
+export const NO_DISPONIBLE = { error: 'Servicio no disponible' };
 const LARGO_MAX_EMAIL = 150; // lo que cabe en la columna usuario.email
 
 // Banderas de la cookie de sesión. HttpOnly: el JavaScript de la página no puede leerla.
@@ -68,7 +68,7 @@ type Manejador = (
 ) => Promise<void>;
 
 // Si la base falla a mitad de una ruta, responde 503 en lugar de dejar la petición colgada.
-function conBd(manejador: Manejador): RequestHandler {
+export function conBd(manejador: Manejador): RequestHandler {
   return async (req, res) => {
     try {
       await manejador(req, res);

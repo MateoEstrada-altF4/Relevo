@@ -3,6 +3,7 @@ import express from 'express';
 import type { Express } from 'express';
 import { crearRutasAuth, manejarErrores } from './auth/rutas.ts';
 import type { LimiteLogin } from './auth/rutas.ts';
+import { crearRutasUsuarios } from './auth/rutasUsuarios.ts';
 import type { ConsultaBd } from './bd.ts';
 
 // Fila que devuelve la consulta de salud.
@@ -46,6 +47,8 @@ export function crearApp({
   });
 
   app.use('/api/auth', crearRutasAuth({ bd: pool, limiteLogin }));
+
+  app.use('/api/usuarios', crearRutasUsuarios({ bd: pool }));
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Ruta no encontrada' });

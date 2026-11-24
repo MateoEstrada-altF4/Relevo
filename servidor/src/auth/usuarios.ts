@@ -1,6 +1,7 @@
 import type { ConsultaBd } from '../bd.ts';
 
-export type Rol = 'encargado' | 'administrador' | 'usuario';
+export const ROLES = ['encargado', 'administrador', 'usuario'] as const;
+export type Rol = (typeof ROLES)[number];
 
 export interface Usuario {
   id: number;
@@ -71,4 +72,25 @@ export async function cambiarPassword(
       where id = $1`,
     [id, passwordHash],
   );
+}
+
+// Crea una cuenta con contraseña temporal: la persona deberá cambiarla en su primer inicio de
+// sesión. Devuelve null si el correo ya existe (el índice único es sobre lower(email), así que
+// la base lo rechaza aunque dos peticiones lleguen al mismo tiempo).
+export async function crearUsuario(
+  bd: ConsultaBd,
+  datos: { nombre: string; email: string; rol: Rol; passwordHash: string },
+): Promise<Pick<Usuario, 'id' | 'nombre' | 'email' | 'rol'> | null> {
+  try {
+    const { rows } = await bd.query<{ id: number }>(
+      `insert into usuario (nombre, email, password_hash, rol_id, debe_cambiar_password)
+       values ($1, $2, $3, (select id from rol where nombre = $4), true)
+       returning id`,
+      [datos.nombre, datos.email, datos.passwordHash, datos.rol],
+    );
+    return { id: rows[0].id, nombre: datos.nombre, email: datos.email, rol: datos.rol };
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') return null;
+    throw error;
+  }
 }

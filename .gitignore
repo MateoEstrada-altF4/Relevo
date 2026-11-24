@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env
 *.log
+
+# Carpetas que genera la app de escritorio de Postman
+.postman/
+/postman/
