@@ -11,9 +11,11 @@ Este manual explica qué se construyó para el Issue #6, **por qué existe cada 
 | Acceso a `usuario` | `servidor/src/auth/usuarios.ts` | Buscar cuentas en la base |
 | Middlewares | `servidor/src/auth/middleware.ts` | `autenticar` (¿quién eres?) y `exigirRol` (¿puedes?) |
 | Rutas | `servidor/src/auth/rutas.ts` | `login`, `logout`, `yo`, `cambiar-password` |
+| Validación | `servidor/src/auth/validacion.ts` | `esTexto`, los largos máximos y `validarNuevoUsuario`, una función pura que se prueba sin servidor |
+| Errores | `servidor/src/errores.ts` | `mensajeDe`, `ErrorDeBd` y el manejador final de Express |
 | Configuración | `servidor/src/config.ts` | El secreto de las sesiones y sus reglas |
 | Semilla | `servidor/src/semilla.ts`, `sembrar.ts` | Crear cuentas de prueba (`npm run bd:semilla`) |
-| Pruebas | `servidor/pruebas/auth/*`, `config.test.ts`, `semilla.test.ts` | 50 pruebas nuevas |
+| Pruebas | `servidor/pruebas/auth/*`, `config.test.ts`, `semilla.test.ts` | 69 pruebas nuevas |
 
 ---
 
@@ -128,7 +130,7 @@ Cerrar sesión borra la cookie del navegador, pero un token ya copiado seguiría
 
 
 ### Cuando la base falla
-Si la consulta falla, la respuesta es **503 `Servicio no disponible`** (no 401: no es culpa de la persona) y el servidor sigue vivo.
+Si la consulta falla, la respuesta es **503 `Servicio no disponible`** (no 401: no es culpa de la persona) y el servidor sigue vivo. `autenticar` no tiene su propio `try/catch`: el error sigue su camino hasta el manejador final (ver *Errores siempre en JSON*).
 
 ---
 
@@ -156,7 +158,13 @@ Es la ruta que usa los tres middlewares en orden: `autenticar` (401 si no hay se
 `express-rate-limit` permite **10 intentos fallidos cada 15 minutos por dirección**; el siguiente recibe 429. Solo cuentan los fallidos: entrar bien no gasta intentos. Frena a quien prueba contraseñas una tras otra.
 
 ### Errores siempre en JSON
-Sin ajuste, Express responde a un JSON roto con una **página HTML con la traza del error** (rutas de archivos incluidas). Un manejador de errores final lo cambia por `400 {"error": ...}`, `413` para cuerpos de más de 100 KB y `415` si el cuerpo llega con una codificación que el servidor no entiende (antes caía en un 500 engañoso).
+Sin ajuste, Express responde a un JSON roto con una **página HTML con la traza del error** (rutas de archivos incluidas). El manejador final, `manejarErrores` en `servidor/src/errores.ts`, lo cambia por `400 {"error": ...}`, `413` para cuerpos de más de 100 KB y `415` si el cuerpo llega con una codificación que el servidor no entiende. Cualquier otro error inesperado es un **500** sin detalles para quien llama.
+
+### Cuando la base no responde: `ErrorDeBd`
+Express 5 ya entrega al manejador final los errores de las funciones `async`, así que las rutas no necesitan un `try/catch` propio. Para que ese manejador sepa que el fallo vino de PostgreSQL, `crearApp` envuelve la base **una sola vez** con `conErroresDeBd`: todo error de una consulta sale como un `ErrorDeBd` y se responde **503**. El `ErrorDeBd` conserva el `code` y la `constraint` del error original, porque el código que espera un fallo concreto (por ejemplo "correo repetido", 23505) los necesita.
+
+### `/api/salud` es pública, y por eso dice lo mínimo
+Responde `{"servidor": "ok", "bd": "conectada"}` (o 503 con `"sin conexión"`). Nunca el nombre de la base ni cuántas tablas tiene: sería información gratis para cualquiera con `curl`. El cliente solo la muestra con sesión, pero eso no protege nada; protege lo que decide el servidor.
 
 ---
 
@@ -249,7 +257,7 @@ La cookie queda vencida (año 1970) y el navegador la borra. **12. `GET /yo` des
 npm test
 ```
 
-57 pruebas del servidor (7 que ya existían y 50 nuevas). Cada archivo y lo que protege:
+76 pruebas del servidor (7 que ya existían y 69 nuevas). Cada archivo y lo que protege:
 
 | Archivo | Qué comprueba |
 |---------|---------------|
@@ -259,6 +267,10 @@ npm test
 | `usuarios.test.ts` | Búsqueda sin importar mayúsculas, `ultimo_acceso`, cambio de contraseña |
 | `middleware.test.ts` | 401, 403, revalidación al desactivar, cambiar de rol o cambiar la contraseña, cookie basura, base caída |
 | `rutas.test.ts` | Login, errores idénticos, cuerpos malos, contraseña gigante, `yo`, logout, cambio de contraseña (con cierre de sesiones viejas), 415, límite de intentos |
+| `usuarios-rutas.test.ts` | Registro: 401, 403 por rol y por contraseña temporal, creación con hash y rastro en la auditoría, 409 y 400 |
+| `validacion.test.ts` | `validarNuevoUsuario` con valores sueltos, sin servidor: datos limpios, roles, nombre, correo y contraseña |
+| `errores.test.ts` | `mensajeDe`, `ErrorDeBd` (conserva `code` y `constraint`) y `conErroresDeBd` |
+| `salud.test.ts` | `/api/salud` responde solo `servidor` y `bd`, y 503 si la base cae |
 | `semilla.test.ts` | Tres cuentas, repetible, cada una con su propia contraseña, se niega a repetirlas |
 
 **Las pruebas no dejan datos:** cada archivo crea cuentas con una etiqueta propia y las borra al terminar (hay una comprobación de que no quedan filas `prueba-%`). Las rutas que prueban `exigirRol` viven solo en las pruebas, en una mini aplicación; el servidor real no tiene rutas de demostración.
@@ -297,15 +309,15 @@ Las pruebas necesitan la base levantada y las variables `SEMILLA_PASSWORD_*` en 
 | Cargando | "Comprobando la sesión…" |
 | Sin sesión | Tarjeta de **Iniciar sesión** |
 | Sesión con contraseña temporal | Solo **Cambia tu contraseña** (lo mismo que impone el servidor) |
-| Sesión normal | Barra con tu nombre, tu rol y **Cerrar sesión**, y debajo el estado del servidor y la base |
+| Sesión normal | Barra con tu nombre, tu rol y **Cerrar sesión**, y debajo el estado del servidor y la base (solo "en marcha" y "conectada") |
 
 ### Cómo está armada
 - **`useSesion.ts`** es el único lugar que habla con `/api/auth/*`. Ofrece `iniciarSesion`, `cerrarSesion` y `cambiarPassword`, y guarda el estado (`cargando`, `sin-sesion` o `activa`).
 - **`Login.tsx` y `CambiarPassword.tsx`** son los formularios. Los marcos y campos que comparten viven en `formulario.tsx`, para que se vean igual y no se repita el mismo marcado.
-- **`App.tsx`** decide qué pantalla mostrar mirando solo el estado de la sesión. El panel del estado del servidor se movió a su propio componente, `PanelEstado`, que **solo se monta con sesión iniciada**: sin sesión no se consulta `/api/salud` cada 10 segundos para nada.
+- **`App.tsx`** decide qué pantalla mostrar mirando solo el estado de la sesión (un `switch`). Cada pieza vive en su archivo: `BarraDeSesion`, `PanelEstado` (que **solo se monta con sesión iniciada**: sin sesión no se consulta `/api/salud` cada 10 segundos para nada), `BotonPrimario` y `Centrado` en `formulario.tsx`, y `useSalir`, que avisa si el cierre de sesión falló.
 
 ### Por qué el cliente nunca ve el token
-La cookie es `HttpOnly`, así que el JavaScript de la página no puede leerla. El cliente no guarda nada: al abrir la página pregunta `GET /api/auth/yo` y el navegador manda la cookie solo. Por eso recargar la página no te saca de la sesión, y por eso cerrar sesión consiste en pedirle al servidor que borre la cookie. Es más seguro que guardar un token en `localStorage`, donde cualquier script de la página podría leerlo.
+La cookie es `HttpOnly`, así que el JavaScript de la página no puede leerla. El cliente no guarda nada: al abrir la página pregunta `GET /api/auth/yo` y el navegador manda la cookie solo. Por eso recargar la página no te saca de la sesión, y por eso cerrar sesión consiste en pedirle al servidor que borre la cookie. **Si el servidor no confirma el cierre** (no hay red o responde un error), la sesión **se queda abierta en pantalla** y se muestra "No se pudo cerrar la sesión. Inténtalo de nuevo": cerrarla en pantalla mientras la cookie sigue vigente engañaría a la persona. Es más seguro que guardar un token en `localStorage`, donde cualquier script de la página podría leerlo.
 
 ### Los mensajes de error
 El servidor ya manda un mensaje claro en cada error, así que el cliente solo lo muestra (`role="alert"` para que los lectores de pantalla lo anuncien). Dos casos los pone el cliente: 503 ("El servidor no está disponible") y cuando el servidor no responde ("Sin respuesta del servidor").
