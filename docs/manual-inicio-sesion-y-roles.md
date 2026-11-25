@@ -11,8 +11,8 @@ Este manual explica qué se construyó para el Issue #6, **por qué existe cada 
 | Acceso a `usuario` | `servidor/src/auth/usuarios.ts` | Buscar cuentas en la base |
 | Middlewares | `servidor/src/auth/middleware.ts` | `autenticar` (¿quién eres?) y `exigirRol` (¿puedes?) |
 | Rutas | `servidor/src/auth/rutas.ts` | `login`, `logout`, `yo`, `cambiar-password` |
-| Validación | `servidor/src/auth/validacion.ts` | `esTexto`, los largos máximos y `validarNuevoUsuario`, una función pura que se prueba sin servidor |
-| Errores | `servidor/src/errores.ts` | `mensajeDe`, `ErrorDeBd` y el manejador final de Express |
+| Validación | `servidor/src/auth/validacion.ts` | Los esquemas de **zod** y `validarLogin`, `validarCambioPassword` y `validarNuevoUsuario`: funciones puras que se prueban sin servidor |
+| Errores | `servidor/src/errores.ts` | `mensajeDe`, `ErrorDeBd`, `MENSAJES_ERROR` (el mapa de código a mensaje) y el manejador final de Express |
 | Configuración | `servidor/src/config.ts` | El secreto de las sesiones y sus reglas |
 | Semilla | `servidor/src/semilla.ts`, `sembrar.ts` | Crear cuentas de prueba (`npm run bd:semilla`) |
 | Pruebas | `servidor/pruebas/auth/*`, `config.test.ts`, `semilla.test.ts` | 69 pruebas nuevas |
@@ -268,7 +268,7 @@ npm test
 | `middleware.test.ts` | 401, 403, revalidación al desactivar, cambiar de rol o cambiar la contraseña, cookie basura, base caída |
 | `rutas.test.ts` | Login, errores idénticos, cuerpos malos, contraseña gigante, `yo`, logout, cambio de contraseña (con cierre de sesiones viejas), 415, límite de intentos |
 | `usuarios-rutas.test.ts` | Registro: 401, 403 por rol y por contraseña temporal, creación con hash y rastro en la auditoría, 409 y 400 |
-| `validacion.test.ts` | `validarNuevoUsuario` con valores sueltos, sin servidor: datos limpios, roles, nombre, correo y contraseña |
+| `validacion.test.ts` | `validarNuevoUsuario`, `validarLogin` y `validarCambioPassword` con valores sueltos, sin servidor: datos limpios, roles, nombre, correo y contraseñas |
 | `errores.test.ts` | `mensajeDe`, `ErrorDeBd` (conserva `code` y `constraint`) y `conErroresDeBd` |
 | `salud.test.ts` | `/api/salud` responde solo `servidor` y `bd`, y 503 si la base cae |
 | `semilla.test.ts` | Tres cuentas, repetible, cada una con su propia contraseña, se niega a repetirlas |
@@ -313,8 +313,8 @@ Las pruebas necesitan la base levantada y las variables `SEMILLA_PASSWORD_*` en 
 
 ### Cómo está armada
 - **`useSesion.ts`** es el único lugar que habla con `/api/auth/*`. Ofrece `iniciarSesion`, `cerrarSesion` y `cambiarPassword`, y guarda el estado (`cargando`, `sin-sesion` o `activa`).
-- **`Login.tsx` y `CambiarPassword.tsx`** son los formularios. Los marcos y campos que comparten viven en `formulario.tsx`, para que se vean igual y no se repita el mismo marcado.
-- **`App.tsx`** decide qué pantalla mostrar mirando solo el estado de la sesión (un `switch`). Cada pieza vive en su archivo: `BarraDeSesion`, `PanelEstado` (que **solo se monta con sesión iniciada**: sin sesión no se consulta `/api/salud` cada 10 segundos para nada), `BotonPrimario` y `Centrado` en `formulario.tsx`, y `useSalir`, que avisa si el cierre de sesión falló.
+- **`Login.tsx` y `CambiarPassword.tsx`** son los formularios. Los marcos y campos que comparten viven en `components/formulario.tsx`, para que se vean igual y no se repita el mismo marcado. La carpeta `components/` guarda las piezas reutilizables.
+- **`App.tsx`** decide qué pantalla mostrar mirando solo el estado de la sesión (un `switch`). Cada pieza vive en su archivo: `components/BarraDeSesion`, `components/PanelEstado` (que **solo se monta con sesión iniciada**: sin sesión no se consulta `/api/salud` cada 10 segundos para nada), `BotonPrimario` y `Centrado` en `components/formulario.tsx`, y `useSalir`, que avisa si el cierre de sesión falló.
 
 ### Por qué el cliente nunca ve el token
 La cookie es `HttpOnly`, así que el JavaScript de la página no puede leerla. El cliente no guarda nada: al abrir la página pregunta `GET /api/auth/yo` y el navegador manda la cookie solo. Por eso recargar la página no te saca de la sesión, y por eso cerrar sesión consiste en pedirle al servidor que borre la cookie. **Si el servidor no confirma el cierre** (no hay red o responde un error), la sesión **se queda abierta en pantalla** y se muestra "No se pudo cerrar la sesión. Inténtalo de nuevo": cerrarla en pantalla mientras la cookie sigue vigente engañaría a la persona. Es más seguro que guardar un token en `localStorage`, donde cualquier script de la página podría leerlo.
