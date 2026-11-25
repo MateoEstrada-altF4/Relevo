@@ -3,13 +3,11 @@ import { useEffect, useState } from 'react';
 // Cada cuánto se vuelve a preguntar al servidor si sigue sano.
 export const INTERVALO_MS = 10_000;
 
-// Cuerpo que devuelve GET /api/salud (en 200 y en 503).
+// Cuerpo que devuelve GET /api/salud (en 200 y en 503). Es una ruta pública, así que el
+// servidor dice solo lo mínimo: no hay nombre de base ni número de tablas.
 export interface RespuestaSalud {
   servidor: 'ok';
   bd: 'conectada' | 'sin conexión';
-  base?: string;
-  hora?: string; // ISO 8601 en UTC
-  tablas?: number;
 }
 
 export type Salud =
