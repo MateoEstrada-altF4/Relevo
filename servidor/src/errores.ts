@@ -28,6 +28,14 @@ export class ErrorDeBd extends Error {
   }
 }
 
+// Los errores del cuerpo de la petición que sabemos explicar, por código de estado. Para
+// responder uno nuevo basta añadir una línea aquí: el código solo se escribe una vez.
+export const MENSAJES_ERROR: Record<number, string> = {
+  400: 'Datos inválidos',
+  413: 'Datos demasiado grandes',
+  415: 'Formato de datos no soportado',
+};
+
 // El último middleware de la aplicación. Express 5 le entrega los errores de cualquier ruta,
 // también los de las funciones async, y los convierte en respuestas JSON en lugar de la
 // página HTML con la traza que Express entrega por defecto:
@@ -45,14 +53,11 @@ export const manejarErrores: ErrorRequestHandler = (error, _req, res, next) => {
     return;
   }
   const estado = (error as { status?: number }).status;
-  if (estado === 413) {
-    res.status(413).json({ error: 'Datos demasiado grandes' });
-  } else if (estado === 415) {
-    res.status(415).json({ error: 'Formato de datos no soportado' });
-  } else if (estado === 400) {
-    res.status(400).json({ error: 'Datos inválidos' });
-  } else {
-    console.error('Error no controlado:', error);
-    res.status(500).json({ error: 'Error interno' });
+  const mensaje = estado === undefined ? undefined : MENSAJES_ERROR[estado];
+  if (estado !== undefined && mensaje !== undefined) {
+    res.status(estado).json({ error: mensaje });
+    return;
   }
+  console.error('Error no controlado:', error);
+  res.status(500).json({ error: 'Error interno' });
 };

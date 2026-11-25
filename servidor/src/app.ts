@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import type { Express } from 'express';
+import ms from 'ms';
 import { crearRutasAuth } from './auth/rutas.ts';
 import type { LimiteLogin } from './auth/rutas.ts';
 import { crearRutasUsuarios } from './auth/rutasUsuarios.ts';
@@ -9,7 +10,7 @@ import type { ConsultaBd } from './bd.ts';
 import { manejarErrores, mensajeDe } from './errores.ts';
 
 // Por defecto: 10 intentos fallidos de inicio de sesión cada 15 minutos por dirección.
-const LIMITE_LOGIN_POR_DEFECTO: LimiteLogin = { maximo: 10, ventanaMs: 15 * 60 * 1000 };
+const LIMITE_LOGIN_POR_DEFECTO: LimiteLogin = { maximo: 10, ventanaMs: ms('15m') };
 
 // Crea la aplicación Express. Recibe el pool para poder sustituirlo en las pruebas.
 export function crearApp({
