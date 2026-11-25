@@ -18,7 +18,6 @@ export interface UsuarioSesion {
 const SIN_SESION = { error: 'Inicia sesión para continuar' };
 const SIN_PERMISO = { error: 'No tienes permiso para esto' };
 const DEBE_CAMBIAR = { error: 'Debes cambiar tu contraseña', codigo: 'CAMBIAR_PASSWORD' };
-const NO_DISPONIBLE = { error: 'Servicio no disponible' };
 
 // Devuelve el usuario que dejó puesto "autenticar". Si no hay ninguno, es un error
 // de programación (se olvidó poner "autenticar" antes), no del cliente.
@@ -40,27 +39,22 @@ export function autenticar(bd: ConsultaBd): RequestHandler {
       return;
     }
 
-    try {
-      const usuario = await buscarPorId(bd, sesionToken.id);
-      // Una huella distinta significa que la contraseña cambió después de emitir este token.
-      if (!usuario?.activo || sesionToken.huella !== huellaPassword(usuario.passwordHash)) {
-        res.status(401).json(SIN_SESION);
-        return;
-      }
-      const sesion: UsuarioSesion = {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        email: usuario.email,
-        rol: usuario.rol,
-        debeCambiarPassword: usuario.debeCambiarPassword,
-      };
-      res.locals.usuario = sesion;
-      next();
-    } catch (error) {
-      const mensaje = error instanceof Error ? error.message : String(error);
-      console.error('No se pudo comprobar la sesión en la base de datos:', mensaje);
-      res.status(503).json(NO_DISPONIBLE);
+    // Si la base falla, el error sigue su camino hasta manejarErrores, que responde 503.
+    const usuario = await buscarPorId(bd, sesionToken.id);
+    // Una huella distinta significa que la contraseña cambió después de emitir este token.
+    if (!usuario?.activo || sesionToken.huella !== huellaPassword(usuario.passwordHash)) {
+      res.status(401).json(SIN_SESION);
+      return;
     }
+    const sesion: UsuarioSesion = {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+      debeCambiarPassword: usuario.debeCambiarPassword,
+    };
+    res.locals.usuario = sesion;
+    next();
   };
 }
 

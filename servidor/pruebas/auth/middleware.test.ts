@@ -14,7 +14,8 @@ import {
 import { huellaPassword } from '../../src/auth/contrasenas.ts';
 import { firmarToken } from '../../src/auth/tokens.ts';
 import { buscarPorId } from '../../src/auth/usuarios.ts';
-import { crearPool } from '../../src/bd.ts';
+import { conErroresDeBd, crearPool } from '../../src/bd.ts';
+import { manejarErrores } from '../../src/errores.ts';
 import type { ConsultaBd } from '../../src/bd.ts';
 import { borrarUsuariosDePrueba, crearUsuarioDePrueba } from '../ayudas.ts';
 
@@ -30,6 +31,8 @@ function crearAppDePrueba(bd: ConsultaBd) {
   app.get('/solo-admin', autenticar(bd), exigirRol('administrador'), responder);
   app.get('/staff', autenticar(bd), exigirRol('encargado', 'administrador'), responder);
   app.get('/estricta', autenticar(bd), exigirPasswordVigente, responder);
+  // Igual que en la aplicación real: los errores de las rutas acaban en el manejador final.
+  app.use(manejarErrores);
   return app;
 }
 
@@ -164,7 +167,8 @@ describe('middlewares de autenticación y roles', () => {
         throw new Error('conexión rechazada');
       },
     };
-    const caida = await escuchar(crearAppDePrueba(baseCaida));
+    // crearApp envuelve la base con conErroresDeBd; esta mini aplicación debe hacer lo mismo.
+    const caida = await escuchar(crearAppDePrueba(conErroresDeBd(baseCaida)));
     try {
       const cookie = `relevo_sesion=${await firmarToken(1, 'cualquier-huella')}`;
       const { estado, cuerpo } = await pedir(caida.url, '/libre', cookie);

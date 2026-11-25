@@ -5,8 +5,8 @@ import type { ConsultaBd } from './bd.ts';
 export const DOMINIO_POR_DEFECTO = 'relevo.test';
 
 // Una cuenta por rol. Las tres entran directo, sin contraseña temporal: para desarrollo
-// es lo cómodo, y el cambio obligatorio sigue funcionando para las cuentas reales que se
-// creen con la contraseña temporal por defecto del esquema.
+// es lo cómodo. Las cuentas que crea el administrador (POST /api/usuarios) sí nacen con
+// contraseña temporal, y el cambio obligatorio sigue funcionando para ellas.
 const CUENTAS: { rol: Rol; nombre: string }[] = [
   { rol: 'administrador', nombre: 'Administrador de prueba' },
   { rol: 'encargado', nombre: 'Encargado de prueba' },

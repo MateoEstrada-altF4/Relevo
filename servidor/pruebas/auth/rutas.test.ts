@@ -12,6 +12,7 @@ import { borrarUsuariosDePrueba, crearUsuarioDePrueba, PASSWORD_DE_PRUEBA } from
 const LIMITE_ALTO = { maximo: 1000, ventanaMs: 60_000 };
 const FALLO_LOGIN = { error: 'Correo o contraseña incorrectos' };
 const DATOS_INVALIDOS = { error: 'Datos de inicio de sesión inválidos' };
+const JSON_INVALIDO = { error: 'Datos inválidos' };
 
 function escuchar(app: Express): Promise<{ servidor: Server; url: string }> {
   return new Promise((resolve) => {
@@ -135,7 +136,8 @@ describe('rutas /api/auth con la base de datos real', () => {
     for (const opciones of malos) {
       const r = await pedir(url, '/api/auth/login', opciones);
       assert.equal(r.estado, 400, JSON.stringify(opciones));
-      assert.deepEqual(r.cuerpo, DATOS_INVALIDOS);
+      // El JSON roto lo rechaza el manejador general de errores; lo demás, la propia ruta.
+      assert.deepEqual(r.cuerpo, opciones.crudo === undefined ? DATOS_INVALIDOS : JSON_INVALIDO);
     }
   });
 
