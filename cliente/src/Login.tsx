@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { BotonPrimario, Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
+import {
+  BotonPrimario,
+  Campo,
+  MensajeDeError,
+  TarjetaFormulario,
+} from './components/formulario.tsx';
 
 // Formulario de inicio de sesión. `alEnviar` devuelve null si salió bien o el mensaje de error.
 export default function Login({

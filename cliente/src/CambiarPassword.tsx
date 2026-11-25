@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { BotonPrimario, Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
+import {
+  BotonPrimario,
+  Campo,
+  MensajeDeError,
+  TarjetaFormulario,
+} from './components/formulario.tsx';
 import { useSalir } from './useSalir.ts';
 import { LARGO_PASSWORD } from './useSesion.ts';
 

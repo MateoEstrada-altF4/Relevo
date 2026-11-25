@@ -1,4 +1,4 @@
-import { useSalud } from './useSalud.ts';
+import { useSalud } from '../useSalud.ts';
 
 // Hora local de Guatemala: las fechas viajan en UTC y se convierten solo al mostrarlas.
 const formatoHora = new Intl.DateTimeFormat('es-GT', {

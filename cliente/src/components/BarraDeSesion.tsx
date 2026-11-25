@@ -1,6 +1,6 @@
 import { MensajeDeError } from './formulario.tsx';
-import { useSalir } from './useSalir.ts';
-import type { Rol, UsuarioSesion } from './useSesion.ts';
+import { useSalir } from '../useSalir.ts';
+import type { Rol, UsuarioSesion } from '../useSesion.ts';
 
 const NOMBRE_ROL: Record<Rol, string> = {
   encargado: 'Encargado',

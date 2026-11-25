@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import BarraDeSesion from './BarraDeSesion.tsx';
+import BarraDeSesion from './components/BarraDeSesion.tsx';
 import CambiarPassword from './CambiarPassword.tsx';
-import { Centrado } from './formulario.tsx';
+import { Centrado } from './components/formulario.tsx';
 import Login from './Login.tsx';
-import PanelEstado from './PanelEstado.tsx';
+import PanelEstado from './components/PanelEstado.tsx';
 import { useSesion } from './useSesion.ts';
 import type { Rol, Sesion } from './useSesion.ts';
 
