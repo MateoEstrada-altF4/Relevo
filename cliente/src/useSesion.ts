@@ -35,6 +35,7 @@ async function mensajeDeError(respuesta: Response): Promise<string> {
 }
 
 const SIN_RESPUESTA = 'Sin respuesta del servidor';
+const NO_SE_CERRO_LA_SESION = 'No se pudo cerrar la sesión. Inténtalo de nuevo';
 
 // Lee la sesión actual: 200 con la cuenta, o null si no hay sesión (o el servidor no responde).
 async function consultarSesion(signal?: AbortSignal): Promise<RespuestaSesion | null> {
@@ -87,11 +88,18 @@ export function useSesion() {
     [aplicar],
   );
 
-  const cerrarSesion = useCallback(async () => {
+  // Devuelve null si la sesión se cerró, o el mensaje de error para mostrarlo.
+  // Decisión: si el servidor no confirma el cierre (no hay red, o responde un error), la sesión
+  // SE QUEDA abierta en pantalla y se avisa. Cerrarla en pantalla mientras la cookie sigue
+  // vigente sería engañoso: la persona creería que salió y su sesión seguiría viva.
+  const cerrarSesion = useCallback(async (): Promise<string | null> => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } finally {
+      const respuesta = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!respuesta.ok) return NO_SE_CERRO_LA_SESION;
       aplicar(null);
+      return null;
+    } catch {
+      return NO_SE_CERRO_LA_SESION;
     }
   }, [aplicar]);
 

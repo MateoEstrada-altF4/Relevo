@@ -59,6 +59,32 @@ export function Campo({
   );
 }
 
+// El botón principal de un formulario: el mismo estilo en el login y en el cambio de contraseña.
+export function BotonPrimario({
+  enviando,
+  texto,
+  textoEnviando,
+}: {
+  enviando: boolean;
+  texto: string;
+  textoEnviando: string;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={enviando}
+      className="rounded-lg bg-tema-600 px-4 py-2.5 font-semibold text-white transition hover:bg-tema-700 focus:ring-4 focus:ring-tema-200 focus:outline-none disabled:cursor-wait disabled:opacity-60"
+    >
+      {enviando ? textoEnviando : texto}
+    </button>
+  );
+}
+
+// Centra un formulario en el espacio que queda bajo la cabecera, sea cual sea el tamaño de la ventana.
+export function Centrado({ children }: { children: ReactNode }) {
+  return <div className="flex flex-1 items-center justify-center py-8">{children}</div>;
+}
+
 // role="alert" hace que los lectores de pantalla anuncien el error al aparecer.
 export function MensajeDeError({ mensaje }: { mensaje: string | null }) {
   if (mensaje === null) return null;

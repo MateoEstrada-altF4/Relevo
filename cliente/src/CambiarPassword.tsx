@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
+import { BotonPrimario, Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
+import { useSalir } from './useSalir.ts';
 import { LARGO_PASSWORD } from './useSesion.ts';
 
 // Qué hay que corregir antes de enviar, o null si la contraseña nueva está bien.
@@ -18,12 +19,13 @@ function problemaConLaNueva(actual: string, nueva: string, repetida: string): st
 export default function CambiarPassword({
   nombre,
   alEnviar,
-  alSalir,
+  cerrarSesion,
 }: {
   nombre: string;
   alEnviar: (passwordActual: string, passwordNueva: string) => Promise<string | null>;
-  alSalir: () => void;
+  cerrarSesion: () => Promise<string | null>;
 }) {
+  const salida = useSalir(cerrarSesion);
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
   const [repetida, setRepetida] = useState('');
@@ -78,20 +80,16 @@ export default function CambiarPassword({
         maxLength={LARGO_PASSWORD.max}
       />
       <MensajeDeError mensaje={error} />
+      <MensajeDeError mensaje={salida.error} />
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-lg bg-tema-600 px-4 py-2.5 font-semibold text-white transition hover:bg-tema-700 focus:ring-4 focus:ring-tema-200 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-        >
-          {enviando ? 'Guardando…' : 'Guardar contraseña'}
-        </button>
+        <BotonPrimario enviando={enviando} texto="Guardar contraseña" textoEnviando="Guardando…" />
         <button
           type="button"
-          onClick={alSalir}
-          className="rounded-lg px-3 py-2.5 text-sm font-semibold text-tema-700 hover:underline focus:ring-4 focus:ring-tema-200 focus:outline-none"
+          onClick={() => void salida.salir()}
+          disabled={salida.saliendo}
+          className="rounded-lg px-3 py-2.5 text-sm font-semibold text-tema-700 hover:underline focus:ring-4 focus:ring-tema-200 focus:outline-none disabled:cursor-wait disabled:opacity-60"
         >
-          Cerrar sesión
+          {salida.saliendo ? 'Cerrando…' : 'Cerrar sesión'}
         </button>
       </div>
     </TarjetaFormulario>

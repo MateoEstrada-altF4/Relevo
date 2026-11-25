@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
+import { BotonPrimario, Campo, MensajeDeError, TarjetaFormulario } from './formulario.tsx';
 
 // Formulario de inicio de sesión. `alEnviar` devuelve null si salió bien o el mensaje de error.
 export default function Login({
@@ -46,13 +46,7 @@ export default function Login({
         autoComplete="current-password"
       />
       <MensajeDeError mensaje={error} />
-      <button
-        type="submit"
-        disabled={enviando}
-        className="rounded-lg bg-tema-600 px-4 py-2.5 font-semibold text-white transition hover:bg-tema-700 focus:ring-4 focus:ring-tema-200 focus:outline-none disabled:cursor-wait disabled:opacity-60"
-      >
-        {enviando ? 'Entrando…' : 'Entrar'}
-      </button>
+      <BotonPrimario enviando={enviando} texto="Entrar" textoEnviando="Entrando…" />
     </TarjetaFormulario>
   );
 }
