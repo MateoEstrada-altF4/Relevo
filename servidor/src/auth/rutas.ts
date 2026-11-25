@@ -3,17 +3,12 @@ import type { CookieOptions, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import type { ConsultaBd } from '../bd.ts';
 import { config } from '../config.ts';
-import {
-  hashearPassword,
-  huellaPassword,
-  LARGO_PASSWORD,
-  verificarPassword,
-} from './contrasenas.ts';
+import { hashearPassword, huellaPassword, verificarPassword } from './contrasenas.ts';
 import { autenticar, usuarioActual } from './middleware.ts';
 import type { UsuarioSesion } from './middleware.ts';
 import { firmarToken } from './tokens.ts';
 import { buscarPorEmail, buscarPorId, cambiarPassword, registrarAcceso } from './usuarios.ts';
-import { esTexto, LARGO_MAX_EMAIL } from './validacion.ts';
+import { validarCambioPassword, validarLogin } from './validacion.ts';
 
 export interface LimiteLogin {
   maximo: number;
@@ -21,7 +16,6 @@ export interface LimiteLogin {
 }
 
 const FALLO_LOGIN = { error: 'Correo o contraseña incorrectos' };
-const DATOS_INVALIDOS = { error: 'Datos de inicio de sesión inválidos' };
 
 // Banderas de la cookie de sesión. HttpOnly: el JavaScript de la página no puede leerla.
 // SameSite=Lax: el navegador no la manda en peticiones que vienen de otros sitios.
@@ -79,19 +73,13 @@ export function crearRutasAuth({
   });
 
   router.post('/login', limitador, async (req, res) => {
-    const { email, password } = (req.body ?? {}) as Record<string, unknown>;
     // Se valida el tipo y el largo ANTES de calcular el hash: scrypt es lento a propósito.
-    if (
-      !esTexto(email) ||
-      !esTexto(password) ||
-      email.trim() === '' ||
-      email.length > LARGO_MAX_EMAIL ||
-      password === '' ||
-      password.length > LARGO_PASSWORD.max
-    ) {
-      res.status(400).json(DATOS_INVALIDOS);
+    const lectura = validarLogin(req.body);
+    if ('error' in lectura) {
+      res.status(400).json({ error: lectura.error });
       return;
     }
+    const { email, password } = lectura.datos;
 
     const usuario = await buscarPorEmail(bd, email);
     const coincide = await verificarPassword(
@@ -119,26 +107,12 @@ export function crearRutasAuth({
 
   // No lleva exigirPasswordVigente: es justo la ruta que sí se puede usar con la contraseña temporal.
   router.post('/cambiar-password', autenticar(bd), async (req, res) => {
-    const { passwordActual, passwordNueva } = (req.body ?? {}) as Record<string, unknown>;
-    if (
-      !esTexto(passwordActual) ||
-      !esTexto(passwordNueva) ||
-      passwordActual === '' ||
-      passwordActual.length > LARGO_PASSWORD.max
-    ) {
-      res.status(400).json({ error: 'Datos inválidos' });
+    const lectura = validarCambioPassword(req.body);
+    if ('error' in lectura) {
+      res.status(400).json({ error: lectura.error });
       return;
     }
-    if (passwordNueva.length < LARGO_PASSWORD.min || passwordNueva.length > LARGO_PASSWORD.max) {
-      res.status(400).json({
-        error: `La contraseña nueva debe tener entre ${LARGO_PASSWORD.min} y ${LARGO_PASSWORD.max} caracteres`,
-      });
-      return;
-    }
-    if (passwordNueva === passwordActual) {
-      res.status(400).json({ error: 'La contraseña nueva debe ser distinta de la actual' });
-      return;
-    }
+    const { passwordActual, passwordNueva } = lectura.datos;
 
     const { id } = usuarioActual(res);
     const usuario = await buscarPorId(bd, id);
